@@ -124,6 +124,23 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
         for cell in table.find_all(['td', 'th']):
             cell['class'] = 'border p-2'
 
+    # トーク形式の画像とテキストの処理
+    for talk_div in main_content.find_all('div', class_='talk'):
+        if talk_div:
+            # 画像の処理
+            img_div = talk_div.find('div', class_='talk-img')
+            if img_div and img_div.find('img'):
+                img = img_div.find('img')
+                if img.get('src'):
+                    img['src'] = urljoin(url, img['src'])
+                    img['loading'] = 'lazy'
+                    img['class'] = 'w-full h-full rounded-full object-cover'
+            
+            # 吹き出しテキストの処理
+            balloon_div = talk_div.find('div', class_='talk-balloonR')
+            if balloon_div:
+                balloon_div['class'] = balloon_div.get('class', []) + ['flex-1 relative bg-muted p-4 rounded-lg']
+
     # スタイルを維持したまま返す
     return str(main_content)
 
