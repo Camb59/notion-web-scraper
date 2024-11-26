@@ -25,6 +25,10 @@ def scrape_content():
             url=url,
             title=scraped_data['title'],
             content=scraped_data['content'],
+            description=scraped_data.get('description'),
+            author=scraped_data.get('author'),
+            publish_date=scraped_data.get('date'),
+            site_name=scraped_data.get('site_name'),
             header_image=scraped_data.get('header_image')
         )
         db.session.add(content)
