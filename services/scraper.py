@@ -76,7 +76,7 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
         return metadata
 
 def extract_main_content(soup: BeautifulSoup, url: str) -> str:
-    # メインコンテンツの特定
+    # メインコンテンツの検出を改善
     main_content = None
     for selector in [
         'article', 'main', 
@@ -98,37 +98,26 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
     if not main_content:
         main_content = soup
 
-    # 不要な要素の削除
+    # 不要な要素を削除
     for element in main_content.find_all(['script', 'style', 'iframe', 'nav', 'header', 'footer', 'aside']):
         element.decompose()
 
-    # 画像の処理
+    # 画像の処理を改善
     for img in main_content.find_all('img'):
         if img.get('src'):
             img['src'] = urljoin(url, img['src'])
-            # 元のクラスを保持しつつ、新しいクラスを追加
-            current_classes = img.get('class', [])
-            if isinstance(current_classes, list):
-                current_classes = ' '.join(current_classes)
-            new_classes = f"{current_classes} max-w-full h-auto".strip()
-            img['class'] = new_classes
+            img['loading'] = 'lazy'
+            img['class'] = 'max-w-full h-auto rounded-lg'
+        if img.get('data-src'):  # 遅延読み込み対応
+            img['src'] = urljoin(url, img['data-src'])
 
-    # テーブルの処理
+    # テーブルの処理を改善
     for table in main_content.find_all('table'):
-        current_classes = table.get('class', [])
-        if isinstance(current_classes, list):
-            current_classes = ' '.join(current_classes)
-        new_classes = f"{current_classes} w-full border-collapse".strip()
-        table['class'] = new_classes
-        
+        table['class'] = 'w-full border-collapse my-4'
         for cell in table.find_all(['td', 'th']):
-            current_classes = cell.get('class', [])
-            if isinstance(current_classes, list):
-                current_classes = ' '.join(current_classes)
-            new_classes = f"{current_classes} border p-2".strip()
-            cell['class'] = new_classes
+            cell['class'] = 'border p-2'
 
-    # HTMLの構造を維持したまま返す
+    # スタイルを維持したまま返す
     return str(main_content)
 
 def scrape_url(url: str) -> Dict[str, str]:

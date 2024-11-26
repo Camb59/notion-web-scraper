@@ -55,8 +55,8 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             dangerouslySetInnerHTML={{ __html: content.body }}
             className={cn(
               "w-full",
-              "[&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg",
-              "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4",
+              "[&_img]:max-w-full [&_img]:h-auto [&_img]:inline-block [&_img]:rounded-lg",
+              "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:table-auto",
               "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted",
               "[&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-4",
               "[&_h2]:text-3xl [&_h2]:font-bold [&_h2]:mb-3",
