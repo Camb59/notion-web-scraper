@@ -10,26 +10,17 @@ import json
 from datetime import datetime
 
 def clean_text(text: Optional[str]) -> str:
-    """
-    Clean and sanitize text content with improved handling
-    
-    Args:
-        text: The text to clean
-        
-    Returns:
-        str: The cleaned text
-    """
     if not text:
         return ""
     
     try:
-        # HTML entities decoding
+        # Decode HTML entities
         text = html.unescape(text)
         
-        # Remove control characters except newlines and tabs
-        text = "".join(char for char in text if ord(char) >= 32 or char in "\n\r\t")
+        # Remove control characters
+        text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\r\t')
         
-        # Remove excessive whitespace while preserving newlines
+        # Normalize whitespace while preserving meaningful line breaks
         lines = text.split('\n')
         cleaned_lines = [re.sub(r'\s+', ' ', line).strip() for line in lines]
         text = '\n'.join(line for line in cleaned_lines if line)
@@ -84,29 +75,44 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
         logging.error(f"Error extracting metadata: {str(e)}")
         return metadata
 
+def extract_main_content(soup: BeautifulSoup) -> str:
+    # Try to find main content container
+    for container in [
+        soup.find('main'),
+        soup.find('article'),
+        soup.find(class_=lambda x: x and ('content' in x or 'article' in x)),
+        soup.find(id=lambda x: x and ('content' in x or 'article' in x))
+    ]:
+        if container:
+            # Remove unwanted elements
+            for element in container.find_all(['script', 'style', 'nav', 'header', 'footer']):
+                element.decompose()
+            
+            # Get text with proper spacing
+            content = container.get_text(separator='\n', strip=True)
+            if content:
+                return content
+    
+    # Fallback: collect all paragraph text
+    paragraphs = soup.find_all('p')
+    return '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+
 def scrape_url(url: str) -> Dict[str, str]:
-    """Scrape content from URL with improved error handling"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
+        response.encoding = response.apparent_encoding
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Extract metadata
         metadata = extract_metadata(soup, url)
         
-        # Extract main content (prioritize main or article tags)
-        content = ''
-        main_content = soup.find('main') or soup.find('article')
-        if main_content:
-            content = main_content.get_text(separator='\n', strip=True)
-        else:
-            # Fallback: look for content-like sections
-            content_tags = soup.find_all(['p', 'div'], class_=lambda x: x and any(word in str(x).lower() for word in ['content', 'article', 'entry', 'post']))
-            content = '\n'.join(tag.get_text(strip=True) for tag in content_tags)
+        # Extract main content with improved parsing
+        content = extract_main_content(soup)
         
         # Clean and validate all data
         cleaned_data = {
