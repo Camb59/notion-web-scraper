@@ -34,26 +34,28 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
 
   const renderContent = (content: { title: string; body: string }, isTranslated: boolean) => {
     return (
-      <article className="w-full">
-        <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight mb-6">
+      <article className="w-full max-w-none">
+        <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight mb-6 w-full">
           {content.title}
         </h1>
-        <div className="w-full">
+        <div className="w-full max-w-none">
           <div 
             dangerouslySetInnerHTML={{ __html: content.body }}
             className={cn(
-              "w-full",
+              "w-full max-w-none",
               "[&>*]:w-full",
               "[&_img]:block [&_img]:max-w-full [&_img]:w-auto [&_img]:h-auto [&_img]:mx-auto",
               "[&_figure]:w-full [&_figure]:my-4 [&_figure]:mx-auto",
               "[&_figure_img]:block [&_figure_img]:max-w-full [&_figure_img]:w-auto [&_figure_img]:h-auto [&_figure_img]:mx-auto",
               "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4",
               "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2",
-              "[&_h1]:text-4xl [&_h1]:mb-4",
-              "[&_h2]:text-3xl [&_h2]:mb-3",
-              "[&_h3]:text-2xl [&_h3]:mb-2",
-              "[&_p]:mb-4",
-              "[&_ul]:mb-4 [&_ol]:mb-4 [&_li]:ml-4"
+              "[&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:w-full",
+              "[&_h2]:text-3xl [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:w-full",
+              "[&_h3]:text-2xl [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:w-full",
+              "[&_p]:mb-4 [&_p]:w-full",
+              "[&_ul]:mb-4 [&_ul]:w-full",
+              "[&_ol]:mb-4 [&_ol]:w-full",
+              "[&_li]:ml-4"
             )}
           />
         </div>
@@ -72,12 +74,12 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
           </TabsList>
         </div>
         <TabsContent value="original">
-          <div className="w-full">
+          <div className="w-full max-w-none">
             {renderContent(content, false)}
           </div>
         </TabsContent>
         <TabsContent value="translated">
-          <div className="w-full">
+          <div className="w-full max-w-none">
             {isTranslated && translatedContent ? (
               renderContent(translatedContent, true)
             ) : (
