@@ -50,14 +50,14 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             </a>
           </div>
         </div>
-        <div className="prose prose-lg w-full max-w-none">
+        <div className="prose prose-lg w-full max-w-none overflow-hidden">
           <div 
             dangerouslySetInnerHTML={{ __html: content.body }}
             className={cn(
-              "w-full overflow-x-hidden",
-              "[&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:object-contain [&_img]:mx-auto",
+              "w-full",
+              "[&_img]:w-auto [&_img]:max-w-full [&_img]:h-auto [&_img]:object-scale-down [&_img]:mx-auto",
               "[&_figure]:w-full [&_figure]:my-4 [&_figure]:overflow-hidden",
-              "[&_figure_img]:max-w-full [&_figure_img]:h-auto [&_figure_img]:object-contain [&_figure_img]:mx-auto",
+              "[&_figure_img]:w-auto [&_figure_img]:max-w-full [&_figure_img]:h-auto [&_figure_img]:object-scale-down [&_figure_img]:mx-auto",
               "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:table-auto",
               "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted",
               "[&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-4",
@@ -102,11 +102,11 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
           </div>
         </TabsContent>
         <TabsContent value="both" className="mt-6">
-          <div className="w-full space-y-12">
-            <div className="w-full">
+          <div className="grid grid-cols-2 gap-8">
+            <div className="border-r pr-8">
               {renderContent(content, false)}
             </div>
-            <div className="w-full pt-8 border-t">
+            <div className="pl-8">
               {isTranslated && translatedContent ? (
                 renderContent(translatedContent, true)
               ) : (
