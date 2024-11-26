@@ -76,36 +76,34 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
         return metadata
 
 def extract_main_content(soup: BeautifulSoup, url: str) -> str:
-    # メインコンテンツの検出を改善
-    main_content = None
-    for selector in [
-        'article', 'main', 
-        '[role="main"]', 
-        '#main-content', 
-        '.main-content',
-        '.post-content',
-        '.entry-content'
-    ]:
-        main_content = soup.select_one(selector)
-        if main_content:
-            break
-
+    # メインコンテンツの取得
+    main_content = soup.find(['article', 'main']) or soup.find(class_=lambda x: x and any(
+        word in str(x).lower() for word in ['content', 'article', 'entry', 'post']
+    ))
+    
     if not main_content:
-        main_content = soup.find('div', class_=lambda x: x and any(
-            word in str(x).lower() for word in ['content', 'article', 'entry', 'post']
+        main_content = soup.find('div', id=lambda x: x and any(
+            word in str(x).lower() for word in ['content', 'main', 'article']
         ))
-
+    
     if not main_content:
         main_content = soup
-
+    
     # 不要な要素を削除
     for element in main_content.find_all(['script', 'style', 'iframe', 'nav', 'header', 'footer', 'aside']):
         element.decompose()
-
-    # 画像の処理を改善
+    
+    # 画像の処理
     for img in main_content.find_all('img'):
         if img.get('src'):
             img['src'] = urljoin(url, img['src'])
+            # レスポンシブ対応
+            current_classes = img.get('class', [])
+            if isinstance(current_classes, str):
+                current_classes = current_classes.split()
+            img['class'] = ' '.join(current_classes + ['max-w-full', 'h-auto'])
+        
+        # srcset の処理
         if img.get('srcset'):
             srcset_parts = []
             for srcset in img['srcset'].split(','):
@@ -113,29 +111,20 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
                 src = urljoin(url, src)
                 srcset_parts.append(f"{src} {' '.join(size)}")
             img['srcset'] = ', '.join(srcset_parts)
-
-    # スタイルの保持
-    for element in main_content.find_all(True):
-        if 'class' in element.attrs:
-            element['class'] = ' '.join(element['class'])
-        if 'style' in element.attrs:
-            element['style'] = element['style']
-
+    
     # テーブルの処理
     for table in main_content.find_all('table'):
         current_classes = table.get('class', [])
-        if isinstance(current_classes, list):
-            current_classes = ' '.join(current_classes)
-        new_classes = f"{current_classes} w-full border-collapse".strip()
-        table['class'] = new_classes
+        if isinstance(current_classes, str):
+            current_classes = current_classes.split()
+        table['class'] = ' '.join(current_classes + ['w-full', 'border-collapse'])
         
-        for td in table.find_all(['td', 'th']):
-            current_td_classes = td.get('class', [])
-            if isinstance(current_td_classes, list):
-                current_td_classes = ' '.join(current_td_classes)
-            new_td_classes = f"{current_td_classes} border p-2".strip()
-            td['class'] = new_td_classes
-
+        for cell in table.find_all(['td', 'th']):
+            current_classes = cell.get('class', [])
+            if isinstance(current_classes, str):
+                current_classes = current_classes.split()
+            cell['class'] = ' '.join(current_classes + ['border', 'p-2'])
+    
     return str(main_content)
 
 def scrape_url(url: str) -> Dict[str, str]:

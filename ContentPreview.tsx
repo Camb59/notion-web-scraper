@@ -34,11 +34,11 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
 
   const renderContent = (content: { title: string; body: string }, isTranslated: boolean) => {
     return (
-      <article className="w-full max-w-none">
-        <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight mb-6">
+      <article className="space-y-6">
+        <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight">
           {content.title}
         </h1>
-        <div className="flex items-center gap-6 text-base text-muted-foreground mb-6">
+        <div className="flex items-center gap-6 text-base text-muted-foreground">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             <span>{content.date}</span>
@@ -50,10 +50,10 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             </a>
           </div>
         </div>
-        <div className="prose prose-lg w-full max-w-none prose-headings:font-bold prose-headings:tracking-tight">
+        <div className="prose prose-lg max-w-none">
           <div 
             dangerouslySetInnerHTML={{ __html: content.body }}
-            className="w-full [&_img]:max-w-full [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2"
+            className="[&_img]:max-w-full [&_img]:h-auto [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_figure]:my-4 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-gray-600"
           />
         </div>
       </article>
