@@ -3,6 +3,7 @@ import os
 import logging
 from typing import Dict, Any, Optional
 import traceback
+from datetime import datetime
 
 notion = Client(auth=os.environ["NOTION_TOKEN"])
 
@@ -14,7 +15,7 @@ def get_database_properties() -> Dict[str, Any]:
     try:
         database_id = os.environ.get("NOTION_DATABASE_ID")
         if not database_id:
-            raise ValueError("NOTION_DATABASE_ID environment variable is not set")
+            raise ValueError("NOTION_DATABASE_IDが設定されていません")
             
         # Fetch database metadata
         database = notion.databases.retrieve(database_id=database_id)
@@ -50,6 +51,7 @@ def get_database_properties() -> Dict[str, Any]:
         for prop_name, prop_data in database["properties"].items():
             # Skip excluded properties
             if prop_name in excluded_properties:
+                logging.debug(f"除外されたプロパティをスキップ: {prop_name}")
                 continue
                 
             prop_type = prop_data["type"]
@@ -74,7 +76,7 @@ def get_database_properties() -> Dict[str, Any]:
         }
     except ValueError as ve:
         error_msg = str(ve)
-        logging.error(f"Validation error in get_database_properties: {error_msg}")
+        logging.error(f"バリデーションエラー: {error_msg}")
         return {
             "status": "error",
             "error": error_msg,
@@ -82,11 +84,11 @@ def get_database_properties() -> Dict[str, Any]:
         }
     except Exception as e:
         error_msg = str(e)
-        logging.error(f"Error in get_database_properties: {error_msg}")
-        logging.error(f"Traceback: {traceback.format_exc()}")
+        logging.error(f"Notionプロパティ取得エラー: {error_msg}")
+        logging.error(f"トレースバック: {traceback.format_exc()}")
         return {
             "status": "error",
-            "error": "Failed to fetch Notion database properties",
+            "error": "Notionデータベースのプロパティ取得に失敗しました",
             "type": "system_error",
             "details": error_msg
         }
@@ -96,25 +98,22 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
     try:
         database_id = os.environ.get("NOTION_DATABASE_ID")
         if not database_id:
-            raise ValueError("NOTION_DATABASE_ID environment variable is not set")
+            raise ValueError("NOTION_DATABASE_IDが設定されていません")
         
         # Validate properties
         database_props = get_database_properties()
         if database_props["status"] == "error":
-            raise ValueError(f"Failed to get database properties: {database_props['error']}")
+            raise ValueError(f"データベースプロパティの取得に失敗: {database_props['error']}")
         
         valid_props = database_props["data"]
         
-        # Get current timestamp for automatic date property
-        current_time = datetime.now().isoformat()
-        
-        # Automatic property mappings
+        # Prepare automatic property mappings
         auto_properties = {
             "titlename": {
                 "title": [{"text": {"content": content.title}}]
             },
             "日付": {
-                "date": {"start": current_time}
+                "date": {"start": datetime.now().isoformat()}
             },
             "発言者": {
                 "rich_text": [{"text": {"content": content.author or content.site_name or ""}}]
@@ -125,26 +124,23 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
         page_content = {
             "parent": {"database_id": database_id},
             "properties": {
-                "Title": {
-                    "title": [{"text": {"content": content.title}}]
-                },
+                **auto_properties,
                 "URL": {
                     "url": content.url
                 },
                 "Content": {
                     "rich_text": [{"text": {"content": content.content[:2000] if content.content else ""}}]
-                },
-                **auto_properties
+                }
             }
         }
         
         # Add custom properties with validation
         for prop_name, prop_value in properties.items():
-            if prop_name in ["Title", "URL", "Content"]:
+            if prop_name in ["URL", "Content"] or prop_name in auto_properties:
                 continue
                 
             if prop_name not in valid_props:
-                logging.warning(f"Skipping invalid property: {prop_name}")
+                logging.warning(f"無効なプロパティをスキップ: {prop_name}")
                 continue
                 
             prop_type = valid_props[prop_name]["type"]
@@ -166,7 +162,7 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
                             "date": {"start": str(prop_value)}
                         }
             except Exception as e:
-                logging.error(f"Error formatting property {prop_name}: {str(e)}")
+                logging.error(f"プロパティのフォーマットエラー {prop_name}: {str(e)}")
                 continue
         
         # Create page
@@ -179,7 +175,7 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
         }
     except ValueError as ve:
         error_msg = str(ve)
-        logging.error(f"Validation error in create_notion_page: {error_msg}")
+        logging.error(f"バリデーションエラー: {error_msg}")
         return {
             "status": "error",
             "error": error_msg,
@@ -187,11 +183,11 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
         }
     except Exception as e:
         error_msg = str(e)
-        logging.error(f"Error in create_notion_page: {error_msg}")
-        logging.error(f"Traceback: {traceback.format_exc()}")
+        logging.error(f"Notionページ作成エラー: {error_msg}")
+        logging.error(f"トレースバック: {traceback.format_exc()}")
         return {
             "status": "error",
-            "error": "Failed to create Notion page",
+            "error": "Notionページの作成に失敗しました",
             "type": "system_error",
             "details": error_msg
         }
