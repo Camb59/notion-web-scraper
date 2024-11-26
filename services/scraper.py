@@ -1,4 +1,5 @@
 import os
+import copy
 import logging
 import traceback
 from typing import Dict
@@ -90,38 +91,29 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
     if not main_content:
         raise Exception("メインコンテンツが見つかりませんでした")
 
-    # 関連記事セクションを検出して削除
-    related_content = main_content.find(lambda tag: tag.name and 
-        (
-            '関連' in tag.get_text() or 
-            'related' in tag.get_text().lower() or
-            'おすすめ' in tag.get_text() or
-            'recommend' in tag.get_text().lower()
-        )
-    )
-    if related_content:
-        # 関連記事セクションとその後のすべての要素を削除
-        for sibling in related_content.find_all_next():
-            sibling.decompose()
-        related_content.decompose()
+    # コンテンツのクローンを作成して処理
+    main_content = copy.deepcopy(main_content)
 
     # 不要な要素を削除
-    for article_body in main_content.find_all('div', {'itemprop': 'articleBody'}):
-        if article_body.get('class'):
-            classes = article_body['class']
-            if 'col-sm-8' in classes:
-                classes.remove('col-sm-8')
-            article_body['class'] = ' '.join(classes)
     for element in main_content.find_all(['script', 'style', 'iframe', 'nav', 'header', 'footer', 'aside']):
         element.decompose()
 
-    # 画像の処理を改善
+    # 関連記事セクションを検出して削除（見出しタグのみを対象）
+    for heading in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+        if any(word in heading.get_text().lower() for word in ['関連', 'related', 'おすすめ', 'recommend']):
+            # 見出し以降の要素を削除
+            current = heading
+            while current.next_sibling:
+                if current.next_sibling:
+                    current.next_sibling.decompose()
+            heading.decompose()
+
+    # 画像の処理
     for img in main_content.find_all('img'):
         if img.get('src'):
             img['src'] = urljoin(url, img['src'])
             img['loading'] = 'lazy'
-            img['style'] = 'max-width: 100%; height: auto; display: block; margin: 0 auto;'
-        if img.get('data-src'):  # 遅延読み込み対応
+        if img.get('data-src'):
             img['src'] = urljoin(url, img['data-src'])
 
     # テーブルの処理を改善
@@ -130,20 +122,19 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
         for cell in table.find_all(['td', 'th']):
             cell['class'] = 'border p-2'
 
-    # トーク形式の処理を引用ブロックに変更
+    # トーク形式を引用ブロックに変換
     for talk_div in main_content.find_all('div', class_='talk'):
         if talk_div:
-            # テキスト部分を取得
-            balloon_div = talk_div.find('div', class_='talk-balloonR')
-            if balloon_div:
-                text_div = balloon_div.find('div', class_='talk-text')
-                if text_div:
-                    # 新しい引用ブロックを作成
-                    blockquote = soup.new_tag('blockquote')
-                    blockquote['class'] = 'notion-quote'
-                    blockquote.string = text_div.get_text()
-                    # 元の吹き出しを引用ブロックで置き換え
-                    talk_div.replace_with(blockquote)
+            text_content = talk_div.get_text(strip=True)
+            if text_content:
+                blockquote = soup.new_tag('blockquote')
+                blockquote['class'] = 'notion-quote'
+                blockquote.string = text_content
+                talk_div.replace_with(blockquote)
+
+    # デバッグ用にログ出力
+    logging.debug(f"Extracted content length: {len(str(main_content))}")
+    logging.debug(f"Content preview: {str(main_content)[:500]}")
 
     # スタイルを維持したまま返す
     return str(main_content)
