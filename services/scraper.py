@@ -157,11 +157,11 @@ def scrape_url(url: str, max_retries: int = 3, retry_delay: int = 1) -> Dict[str
         try:
             logging.info(f"Attempt {attempt + 1} of {max_retries}")
             
-            # Download content with timeout
+            # Download content
             logging.debug("Fetching URL content")
-            downloaded = trafilatura.fetch_url(url, timeout=30)
+            downloaded = trafilatura.fetch_url(url)
             if not downloaded:
-                raise Exception("Failed to download content")
+                raise Exception("Failed to download URL content - the server may be blocking automated requests")
             
             # Extract main content with trafilatura
             logging.debug("Extracting content using trafilatura")
@@ -179,8 +179,14 @@ def scrape_url(url: str, max_retries: int = 3, retry_delay: int = 1) -> Dict[str
             
             # Parse with BeautifulSoup for additional metadata
             logging.debug("Making request for metadata extraction")
-            response = requests.get(url, timeout=30)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, timeout=30, headers=headers)
             response.raise_for_status()
+            
+            # Handle encoding
+            response.encoding = response.apparent_encoding
             soup = BeautifulSoup(response.text, 'html.parser')
             
             # Extract metadata
