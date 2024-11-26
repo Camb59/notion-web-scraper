@@ -99,6 +99,13 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
         main_content = soup
 
     # 不要な要素を削除
+    # Remove col-sm-8 class from articleBody elements
+    for article_body in main_content.find_all('div', {'itemprop': 'articleBody'}):
+        if article_body.get('class'):
+            classes = article_body['class']
+            if 'col-sm-8' in classes:
+                classes.remove('col-sm-8')
+            article_body['class'] = ' '.join(classes)
     for element in main_content.find_all(['script', 'style', 'iframe', 'nav', 'header', 'footer', 'aside']):
         element.decompose()
 
