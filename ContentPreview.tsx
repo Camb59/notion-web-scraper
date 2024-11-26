@@ -34,11 +34,11 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
 
   const renderContent = (content: { title: string; body: string }, isTranslated: boolean) => {
     return (
-      <article className="space-y-6">
-        <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight">
+      <article className="w-full max-w-none">
+        <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight mb-6">
           {content.title}
         </h1>
-        <div className="flex items-center gap-6 text-base text-muted-foreground">
+        <div className="flex items-center gap-6 text-base text-muted-foreground mb-6">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             <span>{content.date}</span>
@@ -50,8 +50,11 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             </a>
           </div>
         </div>
-        <div className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-img:rounded-lg prose-img:shadow-lg">
-          <div dangerouslySetInnerHTML={{ __html: content.body }} />
+        <div className="prose prose-lg w-full max-w-none prose-headings:font-bold prose-headings:tracking-tight">
+          <div 
+            dangerouslySetInnerHTML={{ __html: content.body }}
+            className="w-full [&_img]:max-w-full [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2"
+          />
         </div>
       </article>
     )
@@ -99,4 +102,3 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
     </div>
   )
 }
-

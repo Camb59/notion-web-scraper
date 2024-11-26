@@ -76,34 +76,58 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
         return metadata
 
 def extract_main_content(soup: BeautifulSoup, url: str) -> str:
-    # メインコンテンツコンテナを検索
-    for container in [
-        soup.find('main'),
-        soup.find('article'),
-        soup.find(class_=lambda x: x and ('content' in x or 'article' in x)),
-        soup.find(id=lambda x: x and ('content' in x or 'article' in x))
+    # メインコンテンツの検出を改善
+    main_content = None
+    for selector in [
+        'article', 'main', 
+        '[role="main"]', 
+        '#main-content', 
+        '.main-content',
+        '.post-content',
+        '.entry-content'
     ]:
-        if container:
-            # 不要な要素を削除
-            for element in container.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside']):
-                element.decompose()
-            
-            # 画像要素のsrcを絶対URLに変換
-            for img in container.find_all('img'):
-                if img.get('src'):
-                    img['src'] = urljoin(url, img['src'])
-                    
-            # 見出し、段落、リスト等の構造を維持
-            return str(container)
-    
-    # フォールバック：記事らしき部分を抽出
-    content_area = soup.new_tag('div')
-    for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'img', 'ul', 'ol', 'blockquote']):
-        if element.name == 'img' and element.get('src'):
-            element['src'] = urljoin(url, element['src'])
-        content_area.append(element)
-    
-    return str(content_area)
+        main_content = soup.select_one(selector)
+        if main_content:
+            break
+
+    if not main_content:
+        main_content = soup.find('div', class_=lambda x: x and any(
+            word in str(x).lower() for word in ['content', 'article', 'entry', 'post']
+        ))
+
+    if not main_content:
+        main_content = soup
+
+    # 不要な要素を削除
+    for element in main_content.find_all(['script', 'style', 'iframe', 'nav', 'header', 'footer', 'aside']):
+        element.decompose()
+
+    # 画像の処理を改善
+    for img in main_content.find_all('img'):
+        if img.get('src'):
+            img['src'] = urljoin(url, img['src'])
+        if img.get('srcset'):
+            srcset_parts = []
+            for srcset in img['srcset'].split(','):
+                src, *size = srcset.strip().split()
+                src = urljoin(url, src)
+                srcset_parts.append(f"{src} {' '.join(size)}")
+            img['srcset'] = ', '.join(srcset_parts)
+
+    # スタイルの保持
+    for element in main_content.find_all(True):
+        if 'class' in element.attrs:
+            element['class'] = ' '.join(element['class'])
+        if 'style' in element.attrs:
+            element['style'] = element['style']
+
+    # テーブルの処理
+    for table in main_content.find_all('table'):
+        table['class'] = table.get('class', []) + ['w-full', 'border-collapse']
+        for td in table.find_all(['td', 'th']):
+            td['class'] = td.get('class', []) + ['border', 'p-2']
+
+    return str(main_content)
 
 def scrape_url(url: str) -> Dict[str, str]:
     try:
