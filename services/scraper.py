@@ -1,105 +1,111 @@
+import os
+import logging
+import traceback
+from typing import Dict
+from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
-from typing import Dict, Optional, Any
-import logging
-import html
-import re
-import traceback
-import json
-from datetime import datetime
 
-def clean_text(text: Optional[str]) -> str:
-    if not text:
-        return ""
-    
-    try:
-        # Decode HTML entities
-        text = html.unescape(text)
-        
-        # Remove control characters
-        text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\r\t')
-        
-        # Normalize whitespace while preserving meaningful line breaks
-        lines = text.split('\n')
-        cleaned_lines = [re.sub(r'\s+', ' ', line).strip() for line in lines]
-        text = '\n'.join(line for line in cleaned_lines if line)
-        
-        return text
-    except Exception as e:
-        logging.error(f"Error cleaning text: {str(e)}")
-        return str(text) if text else ""
-
-def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
-    """Extract metadata from webpage with enhanced error handling"""
-    metadata = {
-        'title': '',
-        'description': '',
-        'author': '',
-        'date': '',
-        'header_image': '',
-        'site_name': ''
-    }
-    
-    try:
-        # Title extraction with fallbacks
-        if soup.title:
-            metadata['title'] = clean_text(soup.title.string)
-        
-        # Meta tags mapping
-        meta_mapping = {
-            'article:author': 'author',
-            'author': 'author',
-            'og:site_name': 'site_name',
-            'og:title': 'title',
-            'og:description': 'description',
-            'og:image': 'header_image',
-            'article:published_time': 'date',
-            'description': 'description'
-        }
-        
-        # Extract meta tags
-        for tag in soup.find_all('meta'):
-            property_name = tag.get('property', tag.get('name', ''))
-            if property_name in meta_mapping:
-                content = clean_text(tag.get('content', ''))
-                if content and not metadata[meta_mapping[property_name]]:
-                    metadata[meta_mapping[property_name]] = content
-        
-        # Ensure header image is absolute URL
-        if metadata['header_image']:
-            metadata['header_image'] = urljoin(url, metadata['header_image'])
-        
-        return metadata
-    except Exception as e:
-        logging.error(f"Error extracting metadata: {str(e)}")
-        return metadata
-
-def extract_main_content(soup: BeautifulSoup, url: str) -> str:
-    # メインコンテンツの検出を改善
-    main_content = None
-    for selector in [
-        'article', 'main', 
-        '[role="main"]', 
-        '#main-content', 
+def identify_main_content(soup: BeautifulSoup) -> BeautifulSoup:
+    """メインコンテンツと思われる要素を特定"""
+    # よくあるメインコンテンツのセレクタやクラス名
+    selectors = [
+        'article',
+        'main',
+        '#main-content',
         '.main-content',
         '.post-content',
-        '.entry-content'
-    ]:
-        main_content = soup.select_one(selector)
-        if main_content:
-            break
+        '.article-content',
+        '.entry-content',
+        '.content'
+    ]
+    
+    for selector in selectors:
+        content = soup.select_one(selector)
+        if content:
+            return content
+    
+    # 最大のテキストコンテンツを持つdivを探す
+    max_text_len = 0
+    main_div = None
+    for div in soup.find_all('div'):
+        text_len = len(div.get_text())
+        if text_len > max_text_len:
+            max_text_len = text_len
+            main_div = div
+    
+    return main_div
 
-    if not main_content:
-        main_content = soup.find('div', class_=lambda x: x and any(
-            word in str(x).lower() for word in ['content', 'article', 'entry', 'post']
-        ))
+def clean_text(text: str) -> str:
+    """テキストのクリーニング"""
+    if not text:
+        return ""
+    # 余分な空白と改行を削除
+    text = " ".join(text.split())
+    return text
 
+def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
+    """メタデータを抽出"""
+    metadata = {}
+    
+    # タイトルの抽出
+    title = soup.find('meta', {'property': 'og:title'})
+    if not title:
+        title = soup.find('title')
+    metadata['title'] = title.get('content', '') if title and title.get('content') else title.string if title else ''
+
+    # 説明文の抽出
+    description = soup.find('meta', {'property': 'og:description'}) or soup.find('meta', {'name': 'description'})
+    metadata['description'] = description.get('content', '') if description else ''
+
+    # 著者の抽出
+    author = soup.find('meta', {'name': 'author'}) or soup.find('meta', {'property': 'article:author'})
+    metadata['author'] = author.get('content', '') if author else ''
+
+    # 日付の抽出
+    date = (
+        soup.find('meta', {'property': 'article:published_time'}) or
+        soup.find('meta', {'property': 'article:modified_time'}) or
+        soup.find('time')
+    )
+    metadata['date'] = date.get('content', '') if date and date.get('content') else date.get('datetime', '') if date else ''
+
+    # サイト名の抽出
+    site_name = soup.find('meta', {'property': 'og:site_name'})
+    metadata['site_name'] = site_name.get('content', '') if site_name else ''
+
+    # ヘッダー画像の抽出
+    header_image = soup.find('meta', {'property': 'og:image'})
+    if header_image and header_image.get('content'):
+        metadata['header_image'] = urljoin(url, header_image.get('content', ''))
+    
+    return metadata
+
+def extract_main_content(soup: BeautifulSoup, url: str) -> str:
+    # メインコンテンツを取得
+    main_content = soup.find('div', {'itemprop': 'articleBody'})
     if not main_content:
-        main_content = soup
+        main_content = identify_main_content(soup)
+    
+    if not main_content:
+        raise Exception("メインコンテンツが見つかりませんでした")
+
+    # 関連記事セクションを検出して削除
+    related_content = main_content.find(lambda tag: tag.name and 
+        (
+            '関連' in tag.get_text() or 
+            'related' in tag.get_text().lower() or
+            'おすすめ' in tag.get_text() or
+            'recommend' in tag.get_text().lower()
+        )
+    )
+    if related_content:
+        # 関連記事セクションとその後のすべての要素を削除
+        for sibling in related_content.find_all_next():
+            sibling.decompose()
+        related_content.decompose()
 
     # 不要な要素を削除
-    # Remove col-sm-8 class from articleBody elements
     for article_body in main_content.find_all('div', {'itemprop': 'articleBody'}):
         if article_body.get('class'):
             classes = article_body['class']
