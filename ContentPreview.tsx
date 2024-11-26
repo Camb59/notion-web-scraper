@@ -34,11 +34,11 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
 
   const renderContent = (content: { title: string; body: string }, isTranslated: boolean) => {
     return (
-      <article className="space-y-6">
-        <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight">
+      <article className="w-full">
+        <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight mb-6">
           {content.title}
         </h1>
-        <div className="flex items-center gap-6 text-base text-muted-foreground">
+        <div className="flex items-center gap-6 text-base text-muted-foreground mb-6">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             <span>{content.date}</span>
@@ -50,10 +50,23 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             </a>
           </div>
         </div>
-        <div className="prose prose-lg max-w-none">
+        <div className="prose prose-lg w-full max-w-none">
           <div 
             dangerouslySetInnerHTML={{ __html: content.body }}
-            className="[&_img]:max-w-full [&_img]:h-auto [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_figure]:my-4 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-gray-600"
+            className={cn(
+              "w-full",
+              "[&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg",
+              "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4",
+              "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted",
+              "[&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-4",
+              "[&_h2]:text-3xl [&_h2]:font-bold [&_h2]:mb-3",
+              "[&_h3]:text-2xl [&_h3]:font-bold [&_h3]:mb-2",
+              "[&_p]:mb-4 [&_ul]:mb-4 [&_ol]:mb-4",
+              "[&_li]:ml-4",
+              "[&_pre]:bg-muted [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto",
+              "[&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded",
+              "[&_blockquote]:border-l-4 [&_blockquote]:border-muted [&_blockquote]:pl-4 [&_blockquote]:italic"
+            )}
           />
         </div>
       </article>
