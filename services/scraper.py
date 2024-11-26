@@ -123,9 +123,18 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
 
     # テーブルの処理
     for table in main_content.find_all('table'):
-        table['class'] = table.get('class', []) + ['w-full', 'border-collapse']
+        current_classes = table.get('class', [])
+        if isinstance(current_classes, list):
+            current_classes = ' '.join(current_classes)
+        new_classes = f"{current_classes} w-full border-collapse".strip()
+        table['class'] = new_classes
+        
         for td in table.find_all(['td', 'th']):
-            td['class'] = td.get('class', []) + ['border', 'p-2']
+            current_td_classes = td.get('class', [])
+            if isinstance(current_td_classes, list):
+                current_td_classes = ' '.join(current_td_classes)
+            new_td_classes = f"{current_td_classes} border p-2".strip()
+            td['class'] = new_td_classes
 
     return str(main_content)
 
