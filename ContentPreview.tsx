@@ -43,9 +43,9 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             dangerouslySetInnerHTML={{ __html: content.body }}
             className={cn(
               "w-full",
-              "[&_img]:w-full [&_img]:h-auto [&_img]:object-contain",
-              "[&_figure]:w-full [&_figure]:my-4",
-              "[&_figure_img]:w-full [&_figure_img]:h-auto [&_figure_img]:object-contain",
+              "[&_img]:max-w-[80%] [&_img]:w-auto [&_img]:h-auto [&_img]:mx-auto [&_img]:my-4 [&_img]:block",
+              "[&_figure]:max-w-[80%] [&_figure]:mx-auto [&_figure]:my-6",
+              "[&_figure_img]:max-w-full [&_figure_img]:w-auto [&_figure_img]:h-auto [&_figure_img]:mx-auto",
               "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4",
               "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2",
               "[&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-4",

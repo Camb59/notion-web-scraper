@@ -114,8 +114,12 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
         if img.get('src'):
             img['src'] = urljoin(url, img['src'])
             img['loading'] = 'lazy'
-            img['style'] = 'max-width: 100%; height: auto; display: block; margin: 0 auto;'
-        if img.get('data-src'):  # 遅延読み込み対応
+            # インライン幅制御を削除し、クラスベースの制御に変更
+            img['class'] = 'content-image'
+            # style属性を削除（CSSで制御）
+            if 'style' in img.attrs:
+                del img['style']
+        if img.get('data-src'):
             img['src'] = urljoin(url, img['data-src'])
 
     # テーブルの処理を改善
