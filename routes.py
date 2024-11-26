@@ -7,42 +7,82 @@ from models import ScrapedContent
 from services.scraper import scrape_url
 from services.translator import translate_text
 
-@app.route('/api/scrape', methods=['POST'])
 @app.route('/')
 def index():
     """Render the main page"""
     return render_template('index.html')
 
+@app.route('/api/scrape', methods=['POST'])
 def scrape():
-    """Scrape content from the given URL"""
+    """Scrape content from the given URL with improved error handling"""
     try:
+        # Validate request
+        if not request.is_json:
+            return jsonify({
+                "status": "error",
+                "message": "Content-Type must be application/json",
+                "type": "validation_error"
+            }), 400
+
         data = request.get_json()
         if not data or 'url' not in data:
-            return jsonify({"error": "URL is required"}), 400
+            return jsonify({
+                "status": "error",
+                "message": "URL is required",
+                "type": "validation_error"
+            }), 400
 
         url = data['url']
-        scraped_data = scrape_url(url)
+        
+        # Scrape URL with proper error handling
+        try:
+            scraped_data = scrape_url(url)
+        except Exception as scrape_error:
+            return jsonify({
+                "status": "error",
+                "message": "Failed to scrape URL",
+                "type": "scraping_error",
+                "details": str(scrape_error)
+            }), 500
 
-        # Save to database
-        content = ScrapedContent(
-            url=url,
-            title=scraped_data['title'],
-            content=scraped_data['content'],
-            description=scraped_data.get('description'),
-            author=scraped_data.get('author'),
-            publish_date=scraped_data.get('date'),
-            site_name=scraped_data.get('site_name'),
-            header_image=scraped_data.get('header_image')
-        )
-        db.session.add(content)
-        db.session.commit()
+        # Save to database with validation
+        try:
+            content = ScrapedContent(
+                url=url,
+                title=scraped_data.get('title', ''),
+                content=scraped_data.get('content', ''),
+                description=scraped_data.get('description', ''),
+                author=scraped_data.get('author', ''),
+                publish_date=scraped_data.get('date', ''),
+                site_name=scraped_data.get('site_name', ''),
+                header_image=scraped_data.get('header_image', '')
+            )
+            db.session.add(content)
+            db.session.commit()
+        except Exception as db_error:
+            db.session.rollback()
+            return jsonify({
+                "status": "error",
+                "message": "Database error",
+                "type": "database_error",
+                "details": str(db_error)
+            }), 500
 
-        return jsonify(content.to_dict())
+        # Return standardized successful response
+        return jsonify({
+            "status": "success",
+            "data": content.to_dict()
+        })
 
     except Exception as e:
         logging.error(f"Error in scrape: {str(e)}")
         logging.error(f"Traceback: {traceback.format_exc()}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "status": "error",
+            "message": "Internal server error",
+            "type": "system_error",
+            "details": str(e)
+        }), 500
 
 @app.route('/api/translate', methods=['POST'])
 def translate():

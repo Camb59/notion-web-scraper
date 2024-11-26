@@ -50,12 +50,12 @@ async function handleUrlSubmit(url) {
         
         const data = await response.json();
         
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to scrape URL');
+        if (!response.ok || data.status === 'error') {
+            throw new Error(data.message || data.error || 'Failed to scrape URL');
         }
         
-        currentContentId = data.id;
-        updatePreview(data);
+        currentContentId = data.data.id;
+        updatePreview(data.data);
         document.getElementById('saveToNotion').disabled = false;
         document.getElementById('contentPreview').classList.remove('d-none');
     } catch (error) {
