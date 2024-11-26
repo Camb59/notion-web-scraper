@@ -70,10 +70,10 @@ export default function Home() {
   }
 
   return (
-    <div className="col-xs-12 p-4">
+    <div className="w-full max-w-none p-4">
       <h1 className="text-3xl font-bold text-center mb-6">Notion Web Scraper</h1>
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 col-xs-12 space-y-6">
+        <div className="flex-1 w-full max-w-none space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>URLを入力</CardTitle>
@@ -83,7 +83,7 @@ export default function Home() {
             </CardContent>
           </Card>
           {scrapedContent && (
-            <Card className="col-xs-12">
+            <Card className="w-full max-w-none">
               <CardContent>
                 <div className="text-xs text-muted-foreground mb-2">コンテンツプレビュー</div>
                 <ContentPreview content={scrapedContent} onTranslate={handleTranslate} />
@@ -91,7 +91,7 @@ export default function Home() {
             </Card>
           )}
         </div>
-        <div className="col-xs-12 lg:w-80 space-y-6">
+        <div className="w-full lg:w-80 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>プロパティ</CardTitle>
