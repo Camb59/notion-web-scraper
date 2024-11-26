@@ -161,14 +161,51 @@ function hideLoading() {
     loadingModal.hide();
 }
 
-function showError(message) {
-    // You can implement a proper error notification system here
-    alert(message);
+function showError(message, type = 'error') {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = `alert alert-danger alert-dismissible fade show`;
+    errorDiv.role = 'alert';
+    
+    let errorMessage = message;
+    if (typeof message === 'object' && message.message) {
+        errorMessage = message.message;
+        if (message.details) {
+            errorMessage += `\n${message.details}`;
+        }
+    }
+    
+    errorDiv.innerHTML = `
+        <strong>エラー:</strong> ${errorMessage}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Insert at the top of the container
+    const container = document.querySelector('.container');
+    container.insertBefore(errorDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        errorDiv.remove();
+    }, 5000);
 }
 
 function showSuccess(message) {
-    // You can implement a proper success notification system here
-    alert(message);
+    const successDiv = document.createElement('div');
+    successDiv.className = 'alert alert-success alert-dismissible fade show';
+    successDiv.role = 'alert';
+    successDiv.innerHTML = `
+        <strong>成功:</strong> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Insert at the top of the container
+    const container = document.querySelector('.container');
+    container.insertBefore(successDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        successDiv.remove();
+    }, 5000);
 }
 
 function getNotionProperties() {

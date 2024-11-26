@@ -81,10 +81,20 @@ def index():
 @app.route('/api/notion/properties', methods=['GET'])
 def get_notion_properties():
     """Get all properties from the Notion database"""
-    try:
-        from services.notion_client import get_database_properties
-        properties = get_database_properties()
-        return jsonify(properties)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    from services.notion_client import get_database_properties
+    result = get_database_properties()
+    
+    if result["status"] == "error":
+        error_code = 400 if result["type"] == "validation_error" else 500
+        return jsonify({
+            "status": "error",
+            "message": result["error"],
+            "type": result["type"],
+            "details": result.get("details")
+        }), error_code
+    
+    return jsonify({
+        "status": "success",
+        "data": result["data"]
+    })
 
