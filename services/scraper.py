@@ -2,9 +2,12 @@ import trafilatura
 from bs4 import BeautifulSoup
 import requests
 from urllib.parse import urljoin
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 import time
 from datetime import datetime
+import json
+import html
+import logging
 
 def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
     """Extract metadata from the webpage with enhanced author and site name detection"""
@@ -46,15 +49,39 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
     schema_tags = soup.find_all('script', type='application/ld+json')
     for tag in schema_tags:
         try:
-            schema_data = json.loads(tag.string)
+            # Clean and sanitize JSON string
+            if not tag.string:
+                continue
+                
+            json_str = tag.string.strip()
+            # Remove any BOM or invalid starting characters
+            while json_str and not json_str[0] in '{[':
+                json_str = json_str[1:]
+                
+            # Handle empty or invalid JSON
+            if not json_str:
+                continue
+                
+            schema_data = json.loads(json_str)
+            
             if isinstance(schema_data, dict):
+                # Extract author information
                 if 'author' in schema_data and isinstance(schema_data['author'], dict):
                     if 'name' in schema_data['author'] and not metadata['author']:
-                        metadata['author'] = schema_data['author']['name']
+                        author_name = html.unescape(schema_data['author']['name'])
+                        metadata['author'] = author_name.strip()
+                
+                # Extract publisher information
                 if 'publisher' in schema_data and isinstance(schema_data['publisher'], dict):
                     if 'name' in schema_data['publisher'] and not metadata['site_name']:
-                        metadata['site_name'] = schema_data['publisher']['name']
-        except (json.JSONDecodeError, AttributeError):
+                        site_name = html.unescape(schema_data['publisher']['name'])
+                        metadata['site_name'] = site_name.strip()
+                        
+        except (json.JSONDecodeError, AttributeError) as e:
+            logging.warning(f"Failed to parse JSON-LD: {str(e)}")
+            continue
+        except Exception as e:
+            logging.error(f"Unexpected error parsing JSON-LD: {str(e)}")
             continue
     
     for tag in soup.find_all('meta'):
@@ -138,16 +165,40 @@ def scrape_url(url: str, max_retries: int = 3, retry_delay: int = 1) -> Dict[str
             # Extract metadata
             metadata = extract_metadata(soup, url)
             
-            # Combine results
-            return {
-                'title': metadata['title'],
-                'content': main_content,
-                'description': metadata['description'],
-                'author': metadata['author'],
-                'date': metadata['date'],
-                'header_image': metadata['header_image'],
-                'site_name': metadata['site_name']
+            # Sanitize and clean the extracted content
+            content = main_content if main_content else ''
+            
+            # Clean up the content
+            content = html.unescape(content)  # Convert HTML entities
+            content = content.strip()
+            
+            # Ensure all text fields are properly sanitized
+            clean_metadata = {
+                'title': html.unescape(metadata['title']).strip(),
+                'content': content,
+                'description': html.unescape(metadata['description']).strip(),
+                'author': html.unescape(metadata['author']).strip(),
+                'date': metadata['date'].strip() if metadata['date'] else '',
+                'header_image': metadata['header_image'].strip(),
+                'site_name': html.unescape(metadata['site_name']).strip()
             }
+            
+            # Convert to JSON and back to ensure it's properly serializable
+            try:
+                json.dumps(clean_metadata)
+                return clean_metadata
+            except (TypeError, ValueError) as e:
+                logging.error(f"JSON serialization error: {str(e)}")
+                # If serialization fails, return safely escaped strings
+                return {
+                    'title': str(clean_metadata['title']),
+                    'content': str(clean_metadata['content']),
+                    'description': str(clean_metadata['description']),
+                    'author': str(clean_metadata['author']),
+                    'date': str(clean_metadata['date']),
+                    'header_image': str(clean_metadata['header_image']),
+                    'site_name': str(clean_metadata['site_name'])
+                }
             
         except Exception as e:
             last_error = str(e)
