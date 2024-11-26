@@ -50,14 +50,15 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             </a>
           </div>
         </div>
-        <div className="prose prose-lg w-full max-w-none overflow-hidden">
+        <div className="prose prose-lg w-full max-w-none">
           <div 
             dangerouslySetInnerHTML={{ __html: content.body }}
+            style={{ maxWidth: '100%', overflow: 'hidden' }}
             className={cn(
-              "w-full",
-              "[&_img]:w-auto [&_img]:max-w-full [&_img]:h-auto [&_img]:object-scale-down [&_img]:mx-auto",
-              "[&_figure]:w-full [&_figure]:my-4 [&_figure]:overflow-hidden",
-              "[&_figure_img]:w-auto [&_figure_img]:max-w-full [&_figure_img]:h-auto [&_figure_img]:object-scale-down [&_figure_img]:mx-auto",
+              "w-full relative",
+              "[&_img]:block [&_img]:max-w-[100%] [&_img]:w-auto [&_img]:h-auto [&_img]:mx-auto",
+              "[&_figure]:max-w-[100%] [&_figure]:mx-auto [&_figure]:my-4",
+              "[&_figure_img]:max-w-[100%] [&_figure_img]:w-auto [&_figure_img]:h-auto [&_figure_img]:mx-auto",
               "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:table-auto",
               "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted",
               "[&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-4",

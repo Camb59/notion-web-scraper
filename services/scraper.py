@@ -107,7 +107,7 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
         if img.get('src'):
             img['src'] = urljoin(url, img['src'])
             img['loading'] = 'lazy'
-            img['class'] = 'w-auto max-w-full h-auto object-scale-down mx-auto'
+            img['style'] = 'max-width: 100%; height: auto; display: block; margin: 0 auto;'
         if img.get('data-src'):  # 遅延読み込み対応
             img['src'] = urljoin(url, img['data-src'])
 
