@@ -43,7 +43,9 @@ def get_database_properties() -> Dict[str, Any]:
             "Content１Type１１０",
             "Parent item",
             "Sub-item",
-            "作成日"
+            "作成日",
+            "MainCategory",  # 追加
+            "SubCategory"    # 追加
         }
         
         # Extract and format properties
@@ -63,10 +65,28 @@ def get_database_properties() -> Dict[str, Any]:
             
             # Add options for select and multi_select properties
             if prop_type in ["select", "multi_select"] and "options" in prop_data[prop_type]:
-                prop_info["options"] = [
-                    {"label": option["name"], "value": option["name"]}
-                    for option in prop_data[prop_type]["options"]
-                ]
+                if prop_name == "重要度":
+                    prop_info["options"] = [
+                        {"label": "★☆☆", "value": "★☆☆"},
+                        {"label": "★★☆", "value": "★★☆"},
+                        {"label": "★★★", "value": "★★★"}
+                    ]
+                else:
+                    prop_info["options"] = [
+                        {"label": option["name"], "value": option["name"]}
+                        for option in prop_data[prop_type]["options"]
+                    ]
+
+            # Add relation properties
+            if prop_type == "relation":
+                prop_info["database_id"] = prop_data["relation"]["database_id"]
+                # Fetch related database title
+                try:
+                    related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
+                    prop_info["database_title"] = related_db["title"][0]["plain_text"]
+                except Exception as e:
+                    logging.error(f"関連データベースの取得エラー: {str(e)}")
+                    prop_info["database_title"] = "Unknown Database"
             
             properties[prop_name] = prop_info
             
