@@ -55,7 +55,8 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             dangerouslySetInnerHTML={{ __html: content.body }}
             className={cn(
               "w-full",
-              "[&_img]:max-w-full [&_img]:h-auto [&_img]:inline-block [&_img]:rounded-lg",
+              "[&_img]:max-w-full [&_img]:h-auto [&_img]:block [&_img]:mx-auto", // 中央揃えと適切なサイズ制御
+              "[&_figure]:my-4 [&_figure]:mx-auto [&_figure]:max-w-full", // figure要素のスタイリング
               "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:table-auto",
               "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted",
               "[&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-4",
@@ -84,23 +85,27 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
           </TabsList>
         </div>
         <TabsContent value="original" className="mt-6">
-          {renderContent(content, false)}
+          <div className="w-full max-w-none">
+            {renderContent(content, false)}
+          </div>
         </TabsContent>
         <TabsContent value="translated" className="mt-6">
-          {isTranslated && translatedContent ? (
-            renderContent(translatedContent, true)
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              翻訳中...
-            </div>
-          )}
+          <div className="w-full max-w-none">
+            {isTranslated && translatedContent ? (
+              renderContent(translatedContent, true)
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                翻訳中...
+              </div>
+            )}
+          </div>
         </TabsContent>
         <TabsContent value="both" className="mt-6">
-          <div className="grid grid-cols-2 gap-8">
-            <div className="border-r pr-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="md:border-r md:pr-8">
               {renderContent(content, false)}
             </div>
-            <div className="pl-8">
+            <div className="md:pl-8">
               {isTranslated && translatedContent ? (
                 renderContent(translatedContent, true)
               ) : (
