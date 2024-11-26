@@ -97,19 +97,39 @@ const NOTION_PROPERTIES: NotionProperty[] = [
 
 export default function NotionPropertiesSelector({ onPropertyChange }: NotionPropertiesSelectorProps) {
   const [properties, setProperties] = useState(NOTION_PROPERTIES)
-  const [selectedValues, setSelectedValues] = useState<Record<string, string>>({})
+  const [selectedValues, setSelectedValues] = useState<Record<string, any>>({})
 
   useEffect(() => {
     // Set current time for creation date
-    const now = new Date().toLocaleString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    setSelectedValues(prev => ({ ...prev, createdAt: now }))
+    const now = new Date()
+    setSelectedValues(prev => ({
+      ...prev,
+      createdAt: now.toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      date: now.toISOString().split('T')[0]
+    }))
+
+    // Fetch Notion properties from API
+    fetchNotionProperties()
   }, [])
+
+  const fetchNotionProperties = async () => {
+    try {
+      const response = await fetch('/api/notion/properties')
+      if (!response.ok) throw new Error('Failed to fetch Notion properties')
+      const data = await response.json()
+      if (data.status === 'success') {
+        setProperties(Object.values(data.data))
+      }
+    } catch (error) {
+      console.error('Error fetching Notion properties:', error)
+    }
+  }
 
   const handleDragEnd = (result: any) => {
     if (!result.destination) return
@@ -122,9 +142,51 @@ export default function NotionPropertiesSelector({ onPropertyChange }: NotionPro
   }
 
   const handlePropertyChange = (propertyId: string, value: string | Date) => {
-    const stringValue = value instanceof Date ? value.toISOString() : value;
-    setSelectedValues(prev => ({ ...prev, [propertyId]: stringValue }));
-    onPropertyChange(propertyId, stringValue);
+    const property = properties.find(p => p.id === propertyId)
+    if (!property) return
+
+    let formattedValue: any
+    switch (property.type) {
+      case 'date':
+        formattedValue = {
+          date: {
+            start: value instanceof Date ? value.toISOString() : value
+          }
+        }
+        break
+      case 'select':
+        formattedValue = {
+          select: {
+            name: value
+          }
+        }
+        break
+      case 'multi_select':
+        formattedValue = {
+          multi_select: value.split(',').map(v => ({ name: v.trim() }))
+        }
+        break
+      case 'url':
+        formattedValue = {
+          url: value
+        }
+        break
+      case 'title':
+        formattedValue = {
+          title: [{ text: { content: value } }]
+        }
+        break
+      case 'rich_text':
+        formattedValue = {
+          rich_text: [{ text: { content: value } }]
+        }
+        break
+      default:
+        formattedValue = value
+    }
+
+    setSelectedValues(prev => ({ ...prev, [propertyId]: formattedValue }))
+    onPropertyChange(propertyId, formattedValue)
   }
 
   return (

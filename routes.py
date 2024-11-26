@@ -1,26 +1,29 @@
-import json
-from flask import request, jsonify
-from flask import render_template
+import os
+import logging
+import traceback
+from flask import jsonify, request, render_template
 from app import app, db
 from models import ScrapedContent
 from services.scraper import scrape_url
 from services.translator import translate_text
-from services.notion_client import create_notion_page
 
 @app.route('/api/scrape', methods=['POST'])
-def scrape_content():
+@app.route('/')
+def index():
+    """Render the main page"""
+    return render_template('index.html')
+
+def scrape():
+    """Scrape content from the given URL"""
     try:
-        url = request.json.get('url')
-        if not url:
-            return jsonify({'error': 'URL is required'}), 400
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({"error": "URL is required"}), 400
 
-        # Check cache
-        existing_content = ScrapedContent.query.filter_by(url=url).first()
-        if existing_content:
-            return jsonify(existing_content.to_dict())
-
-        # Scrape new content
+        url = data['url']
         scraped_data = scrape_url(url)
+
+        # Save to database
         content = ScrapedContent(
             url=url,
             title=scraped_data['title'],
@@ -35,48 +38,45 @@ def scrape_content():
         db.session.commit()
 
         return jsonify(content.to_dict())
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logging.error(f"Error in scrape: {str(e)}")
+        logging.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/translate', methods=['POST'])
-def translate_content():
+def translate():
+    """Translate the scraped content"""
     try:
-        content_id = request.json.get('content_id')
-        content = ScrapedContent.query.get(content_id)
+        data = request.get_json()
+        if not data or 'content_id' not in data:
+            return jsonify({"error": "Content ID is required"}), 400
+
+        content = ScrapedContent.query.get(data['content_id'])
         if not content:
-            return jsonify({'error': 'Content not found'}), 404
+            return jsonify({"error": "Content not found"}), 404
 
-        if not content.translated_title:
-            content.translated_title = translate_text(content.title)
-            content.translated_content = translate_text(content.content)
-            db.session.commit()
+        # Translate title and content
+        translated_title = translate_text(content.title)
+        translated_content = translate_text(content.content)
+        translated_description = translate_text(content.description) if content.description else None
 
-        return jsonify(content.to_dict())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/save-to-notion', methods=['POST'])
-def save_to_notion():
-    try:
-        content_id = request.json.get('content_id')
-        properties = request.json.get('properties', {})
-        
-        content = ScrapedContent.query.get(content_id)
-        if not content:
-            return jsonify({'error': 'Content not found'}), 404
-
-        # Create Notion page
-        page_id = create_notion_page(content, properties)
-        content.notion_page_id = page_id
+        # Update database
+        content.translated_title = translated_title
+        content.translated_content = translated_content
+        content.translated_description = translated_description
         db.session.commit()
 
-        return jsonify({'success': True, 'notion_page_id': page_id})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            "translated_title": translated_title,
+            "translated_content": translated_content,
+            "translated_description": translated_description
+        })
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    except Exception as e:
+        logging.error(f"Error in translate: {str(e)}")
+        logging.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/notion/properties', methods=['GET'])
 def get_notion_properties():
@@ -98,3 +98,55 @@ def get_notion_properties():
         "data": result["data"]
     })
 
+@app.route('/api/save-to-notion', methods=['POST'])
+def save_to_notion():
+    """Save content to Notion with selected properties"""
+    try:
+        data = request.get_json()
+        if not data or 'content_id' not in data or 'properties' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Missing required fields",
+                "type": "validation_error"
+            }), 400
+
+        # Get content from database
+        content = ScrapedContent.query.get(data['content_id'])
+        if not content:
+            return jsonify({
+                "status": "error",
+                "message": "Content not found",
+                "type": "validation_error"
+            }), 404
+
+        # Save to Notion
+        from services.notion_client import create_notion_page
+        result = create_notion_page(content, data['properties'])
+
+        if result["status"] == "error":
+            error_code = 400 if result["type"] == "validation_error" else 500
+            return jsonify({
+                "status": "error",
+                "message": result["error"],
+                "type": result["type"],
+                "details": result.get("details")
+            }), error_code
+
+        # Update notion_page_id in database
+        content.notion_page_id = result["data"]["page_id"]
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "data": result["data"]
+        })
+
+    except Exception as e:
+        logging.error(f"Error in save_to_notion: {str(e)}")
+        logging.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            "status": "error",
+            "message": "Failed to save to Notion",
+            "type": "system_error",
+            "details": str(e)
+        }), 500

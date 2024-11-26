@@ -83,6 +83,13 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
         if not database_id:
             raise ValueError("NOTION_DATABASE_ID environment variable is not set")
         
+        # Validate properties
+        database_props = get_database_properties()
+        if database_props["status"] == "error":
+            raise ValueError(f"Failed to get database properties: {database_props['error']}")
+        
+        valid_props = database_props["data"]
+        
         # Prepare page content
         page_content = {
             "parent": {"database_id": database_id},
@@ -92,15 +99,43 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
                 },
                 "URL": {
                     "url": content.url
+                },
+                "Content": {
+                    "rich_text": [{"text": {"content": content.content[:2000] if content.content else ""}}]
                 }
             }
         }
         
-        # Add custom properties
+        # Add custom properties with validation
         for prop_name, prop_value in properties.items():
-            if prop_name in ["Title", "URL"]:
+            if prop_name in ["Title", "URL", "Content"]:
                 continue
-            page_content["properties"][prop_name] = prop_value
+                
+            if prop_name not in valid_props:
+                logging.warning(f"Skipping invalid property: {prop_name}")
+                continue
+                
+            prop_type = valid_props[prop_name]["type"]
+            try:
+                if isinstance(prop_value, dict):
+                    page_content["properties"][prop_name] = prop_value
+                else:
+                    # Default handling for string values
+                    if prop_type == "rich_text":
+                        page_content["properties"][prop_name] = {
+                            "rich_text": [{"text": {"content": str(prop_value)}}]
+                        }
+                    elif prop_type == "select":
+                        page_content["properties"][prop_name] = {
+                            "select": {"name": str(prop_value)}
+                        }
+                    elif prop_type == "date":
+                        page_content["properties"][prop_name] = {
+                            "date": {"start": str(prop_value)}
+                        }
+            except Exception as e:
+                logging.error(f"Error formatting property {prop_name}: {str(e)}")
+                continue
         
         # Create page
         response = notion.pages.create(**page_content)

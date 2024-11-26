@@ -8,24 +8,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlForm = document.getElementById('urlForm');
     const viewButtons = document.querySelectorAll('[data-view]');
     const saveButton = document.getElementById('saveToNotion');
+    const propertiesForm = document.getElementById('propertiesForm');
 
-    urlForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const url = document.getElementById('urlInput').value;
-        await handleUrlSubmit(url);
-    });
-
-    viewButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const view = button.dataset.view;
-            updateViewMode(view);
+    if (urlForm) {
+        urlForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('urlInput').value;
+            await handleUrlSubmit(url);
         });
-    });
+    }
 
-    saveButton.addEventListener('click', async () => {
-        if (!currentContentId) return;
-        await handleSaveToNotion();
-    });
+    if (viewButtons) {
+        viewButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const view = button.dataset.view;
+                updateViewMode(view);
+            });
+        });
+    }
+
+    if (saveButton) {
+        saveButton.addEventListener('click', async () => {
+            if (!currentContentId) return;
+            await handleSaveToNotion();
+        });
+    }
+
+    // Fetch initial Notion properties
+    fetchNotionProperties();
 });
 
 // Handle URL submission
@@ -38,9 +48,12 @@ async function handleUrlSubmit(url) {
             body: JSON.stringify({ url })
         });
         
-        if (!response.ok) throw new Error('Failed to scrape URL');
-        
         const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to scrape URL');
+        }
+        
         currentContentId = data.id;
         updatePreview(data);
         document.getElementById('saveToNotion').disabled = false;
@@ -65,9 +78,12 @@ async function handleTranslate() {
             body: JSON.stringify({ content_id: currentContentId })
         });
         
-        if (!response.ok) throw new Error('Translation failed');
-        
         const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Translation failed');
+        }
+        
         updateTranslatedContent(data);
     } catch (error) {
         console.error('Error:', error);
@@ -93,9 +109,12 @@ async function handleSaveToNotion() {
             })
         });
         
-        if (!response.ok) throw new Error('Failed to save to Notion');
-        
         const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to save to Notion');
+        }
+        
         showSuccess('Notionに保存しました！');
     } catch (error) {
         console.error('Error:', error);
@@ -105,17 +124,48 @@ async function handleSaveToNotion() {
     }
 }
 
+// Fetch Notion properties
+async function fetchNotionProperties() {
+    try {
+        const response = await fetch('/api/notion/properties');
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch properties');
+        }
+        
+        if (data.status === 'success') {
+            updatePropertiesForm(data.data);
+        }
+    } catch (error) {
+        console.error('Error fetching Notion properties:', error);
+        showError('Notionプロパティの取得に失敗しました');
+    }
+}
+
 // Update preview content
 function updatePreview(data) {
     const originalContent = document.getElementById('originalContent');
-    originalContent.querySelector('.content-title').textContent = data.title;
-    originalContent.querySelector('.content-body').innerHTML = data.content;
+    if (originalContent) {
+        const titleElem = originalContent.querySelector('.content-title');
+        const bodyElem = originalContent.querySelector('.content-body');
+        
+        if (titleElem) titleElem.textContent = data.title;
+        if (bodyElem) bodyElem.innerHTML = data.content;
+    }
 }
 
 function updateTranslatedContent(data) {
     const translatedContent = document.getElementById('translatedContent');
-    translatedContent.querySelector('.content-title').textContent = data.translated_title;
-    translatedContent.querySelector('.content-body').innerHTML = data.translated_content;
+    if (translatedContent) {
+        const titleElem = translatedContent.querySelector('.content-title');
+        const bodyElem = translatedContent.querySelector('.content-body');
+        
+        if (titleElem) titleElem.textContent = data.translated_title;
+        if (bodyElem) bodyElem.innerHTML = data.translated_content;
+        
+        translatedContent.classList.remove('d-none');
+    }
 }
 
 function updateViewMode(mode) {
@@ -127,33 +177,36 @@ function updateViewMode(mode) {
         button.classList.toggle('active', button.dataset.view === mode);
     });
 
-    switch (mode) {
-        case 'original':
-            originalContent.classList.remove('d-none');
-            translatedContent.classList.add('d-none');
-            break;
-        case 'translated':
-            if (!translatedContent.querySelector('.content-title').textContent) {
-                handleTranslate();
-            }
-            originalContent.classList.add('d-none');
-            translatedContent.classList.remove('d-none');
-            break;
-        case 'both':
-            if (!translatedContent.querySelector('.content-title').textContent) {
-                handleTranslate();
-            }
-            originalContent.classList.remove('d-none');
-            translatedContent.classList.remove('d-none');
-            originalContent.classList.add('col-6');
-            translatedContent.classList.add('col-6');
-            break;
+    if (originalContent && translatedContent) {
+        switch (mode) {
+            case 'original':
+                originalContent.classList.remove('d-none');
+                translatedContent.classList.add('d-none');
+                break;
+            case 'translated':
+                if (!translatedContent.querySelector('.content-title').textContent) {
+                    handleTranslate();
+                }
+                originalContent.classList.add('d-none');
+                translatedContent.classList.remove('d-none');
+                break;
+            case 'both':
+                if (!translatedContent.querySelector('.content-title').textContent) {
+                    handleTranslate();
+                }
+                originalContent.classList.remove('d-none');
+                translatedContent.classList.remove('d-none');
+                break;
+        }
     }
 }
 
 // Helper functions
 function showLoading(message) {
-    document.getElementById('loadingMessage').textContent = message;
+    const loadingMessage = document.getElementById('loadingMessage');
+    if (loadingMessage) {
+        loadingMessage.textContent = message;
+    }
     loadingModal.show();
 }
 
@@ -161,56 +214,103 @@ function hideLoading() {
     loadingModal.hide();
 }
 
-function showError(message, type = 'error') {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = `alert alert-danger alert-dismissible fade show`;
-    errorDiv.role = 'alert';
-    
-    let errorMessage = message;
-    if (typeof message === 'object' && message.message) {
-        errorMessage = message.message;
-        if (message.details) {
-            errorMessage += `\n${message.details}`;
-        }
-    }
-    
-    errorDiv.innerHTML = `
-        <strong>エラー:</strong> ${errorMessage}
+function showError(message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+    alertDiv.innerHTML = `
+        <strong>エラー:</strong> ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
     
-    // Insert at the top of the container
     const container = document.querySelector('.container');
-    container.insertBefore(errorDiv, container.firstChild);
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+    }
     
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-        errorDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
 }
 
 function showSuccess(message) {
-    const successDiv = document.createElement('div');
-    successDiv.className = 'alert alert-success alert-dismissible fade show';
-    successDiv.role = 'alert';
-    successDiv.innerHTML = `
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+    alertDiv.innerHTML = `
         <strong>成功:</strong> ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
     
-    // Insert at the top of the container
     const container = document.querySelector('.container');
-    container.insertBefore(successDiv, container.firstChild);
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+    }
     
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-        successDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+
+function updatePropertiesForm(properties) {
+    const form = document.getElementById('propertiesForm');
+    if (!form) return;
+    
+    form.innerHTML = '';
+    
+    Object.entries(properties).forEach(([name, prop]) => {
+        const formGroup = document.createElement('div');
+        formGroup.className = 'mb-3';
+        
+        const label = document.createElement('label');
+        label.className = 'form-label';
+        label.textContent = name;
+        
+        let input;
+        
+        switch (prop.type) {
+            case 'select':
+            case 'multi_select':
+                input = document.createElement('select');
+                input.className = 'form-select';
+                if (prop.type === 'multi_select') {
+                    input.multiple = true;
+                }
+                if (prop.options) {
+                    prop.options.forEach(option => {
+                        const opt = document.createElement('option');
+                        opt.value = option.value;
+                        opt.textContent = option.label;
+                        input.appendChild(opt);
+                    });
+                }
+                break;
+            case 'date':
+                input = document.createElement('input');
+                input.type = 'date';
+                input.className = 'form-control';
+                break;
+            default:
+                input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control';
+        }
+        
+        input.name = name;
+        input.id = `notion_${name}`;
+        
+        formGroup.appendChild(label);
+        formGroup.appendChild(input);
+        form.appendChild(formGroup);
+    });
 }
 
 function getNotionProperties() {
-    // Implement this based on your Notion properties form structure
     const form = document.getElementById('propertiesForm');
+    if (!form) return {};
+    
     const formData = new FormData(form);
-    return Object.fromEntries(formData);
+    const properties = {};
+    
+    for (const [name, value] of formData.entries()) {
+        if (value) {
+            properties[name] = value;
+        }
+    }
+    
+    return properties;
 }
