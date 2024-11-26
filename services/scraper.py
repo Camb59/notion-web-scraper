@@ -75,8 +75,8 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
         logging.error(f"Error extracting metadata: {str(e)}")
         return metadata
 
-def extract_main_content(soup: BeautifulSoup) -> str:
-    # Try to find main content container
+def extract_main_content(soup: BeautifulSoup, url: str) -> str:
+    # メインコンテンツコンテナを検索
     for container in [
         soup.find('main'),
         soup.find('article'),
@@ -84,18 +84,26 @@ def extract_main_content(soup: BeautifulSoup) -> str:
         soup.find(id=lambda x: x and ('content' in x or 'article' in x))
     ]:
         if container:
-            # Remove unwanted elements
-            for element in container.find_all(['script', 'style', 'nav', 'header', 'footer']):
+            # 不要な要素を削除
+            for element in container.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside']):
                 element.decompose()
             
-            # Get text with proper spacing
-            content = container.get_text(separator='\n', strip=True)
-            if content:
-                return content
+            # 画像要素のsrcを絶対URLに変換
+            for img in container.find_all('img'):
+                if img.get('src'):
+                    img['src'] = urljoin(url, img['src'])
+                    
+            # 見出し、段落、リスト等の構造を維持
+            return str(container)
     
-    # Fallback: collect all paragraph text
-    paragraphs = soup.find_all('p')
-    return '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+    # フォールバック：記事らしき部分を抽出
+    content_area = soup.new_tag('div')
+    for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'img', 'ul', 'ol', 'blockquote']):
+        if element.name == 'img' and element.get('src'):
+            element['src'] = urljoin(url, element['src'])
+        content_area.append(element)
+    
+    return str(content_area)
 
 def scrape_url(url: str) -> Dict[str, str]:
     try:
@@ -112,7 +120,7 @@ def scrape_url(url: str) -> Dict[str, str]:
         metadata = extract_metadata(soup, url)
         
         # Extract main content with improved parsing
-        content = extract_main_content(soup)
+        content = extract_main_content(soup, url)
         
         # Clean and validate all data
         cleaned_data = {

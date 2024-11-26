@@ -45,23 +45,13 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
           </div>
           <div className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
-            <a 
-              href={content.url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="hover:underline"
-            >
+            <a href={content.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
               ソース
             </a>
           </div>
         </div>
-        <div className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight">
-          <div dangerouslySetInnerHTML={{ 
-            __html: content.body.replace(
-              /(Uniform Civil Procedure Rules)/g, 
-              '<em>$1</em>'
-            )
-          }} />
+        <div className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-img:rounded-lg prose-img:shadow-lg">
+          <div dangerouslySetInnerHTML={{ __html: content.body }} />
         </div>
       </article>
     )
