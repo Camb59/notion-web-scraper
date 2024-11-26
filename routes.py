@@ -77,3 +77,14 @@ def save_to_notion():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/api/notion/properties', methods=['GET'])
+def get_notion_properties():
+    """Get all properties from the Notion database"""
+    try:
+        from services.notion_client import get_database_properties
+        properties = get_database_properties()
+        return jsonify(properties)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
