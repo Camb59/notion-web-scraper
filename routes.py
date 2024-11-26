@@ -31,14 +31,13 @@ def scrape():
         url = data['url']
         scraped_data = scrape_url(url)
         
-        # レスポンスデータの検証
-        if not scraped_data.get('content'):
+        if not scraped_data or not scraped_data.get('content'):
             return jsonify({
                 "status": "error",
                 "message": "コンテンツの抽出に失敗しました"
             }), 500
 
-        # Save to database
+        # データベースへの保存処理
         content = ScrapedContent(
             url=url,
             title=scraped_data.get('title', ''),
@@ -54,14 +53,19 @@ def scrape():
 
         return jsonify({
             "status": "success",
-            "data": content.to_dict()
+            "data": {
+                "id": content.id,
+                "title": content.title,
+                "content": content.content,
+                "url": content.url
+            }
         })
 
     except Exception as e:
         logging.error(f"Error in scrape: {str(e)}")
         return jsonify({
             "status": "error",
-            "message": str(e)
+            "message": f"URLの抽出に失敗しました: {str(e)}"
         }), 500
 
 @app.route('/api/translate', methods=['POST'])

@@ -149,18 +149,24 @@ def scrape_url(url: str) -> Dict[str, str]:
         }
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
-        response.encoding = response.apparent_encoding
+        
+        # エンコーディングの処理を改善
+        if response.encoding == 'ISO-8859-1':
+            response.encoding = response.apparent_encoding
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Extract metadata and content
+        # メタデータとコンテンツの抽出
         metadata = extract_metadata(soup, url)
         content = extract_main_content(soup, url)
+        
+        if not content:
+            raise Exception("メインコンテンツを抽出できませんでした")
         
         # データの検証とクリーニング
         cleaned_data = {
             'title': clean_text(metadata.get('title', '')),
-            'content': content,  # HTMLコンテンツをそのまま保持
+            'content': content,
             'description': clean_text(metadata.get('description', '')),
             'author': clean_text(metadata.get('author', '')),
             'date': clean_text(metadata.get('date', '')),
@@ -169,19 +175,11 @@ def scrape_url(url: str) -> Dict[str, str]:
             'url': url
         }
         
-        # エンコーディング問題の対処
-        for key, value in cleaned_data.items():
-            if isinstance(value, str):
-                cleaned_data[key] = value.encode('utf-8', errors='replace').decode('utf-8')
-        
         return cleaned_data
             
     except requests.RequestException as e:
-        error_msg = f"Network error: {str(e)}"
-        logging.error(error_msg)
-        raise Exception(error_msg)
+        raise Exception(f"ネットワークエラー: {str(e)}")
     except Exception as e:
-        error_msg = f"Scraping error: {str(e)}"
-        logging.error(f"Error in scrape_url: {error_msg}")
+        logging.error(f"Scraping error: {str(e)}")
         logging.error(f"Traceback: {traceback.format_exc()}")
-        raise Exception(error_msg)
+        raise Exception(f"スクレイピングエラー: {str(e)}")
