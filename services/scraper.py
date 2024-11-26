@@ -124,29 +124,20 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
         for cell in table.find_all(['td', 'th']):
             cell['class'] = 'border p-2'
 
-    # トーク形式の画像とテキストの処理
+    # トーク形式の処理を引用ブロックに変更
     for talk_div in main_content.find_all('div', class_='talk'):
         if talk_div:
-            # 画像の処理
-            img_div = talk_div.find('div', class_='talk-img')
-            if img_div and img_div.find('img'):
-                img = img_div.find('img')
-                if img.get('src'):
-                    img['src'] = urljoin(url, img['src'])
-                    img['loading'] = 'lazy'
-                    img['class'] = 'w-full h-full rounded-full object-cover'
-                img_div['class'] = 'talk-img w-24 h-24 flex-shrink-0'
-        
-            # 吹き出しテキストの処理
+            # テキスト部分を取得
             balloon_div = talk_div.find('div', class_='talk-balloonR')
             if balloon_div:
-                balloon_div['class'] = 'talk-balloonR flex-1 relative bg-blue-50 dark:bg-slate-800 p-4 rounded-lg'
                 text_div = balloon_div.find('div', class_='talk-text')
                 if text_div:
-                    text_div['class'] = 'talk-text text-base leading-relaxed'
-
-            # トーク全体のスタイリング
-            talk_div['class'] = 'talk flex items-start gap-4 my-6'
+                    # 新しい引用ブロックを作成
+                    blockquote = soup.new_tag('blockquote')
+                    blockquote['class'] = 'notion-quote'
+                    blockquote.string = text_div.get_text()
+                    # 元の吹き出しを引用ブロックで置き換え
+                    talk_div.replace_with(blockquote)
 
     # スタイルを維持したまま返す
     return str(main_content)

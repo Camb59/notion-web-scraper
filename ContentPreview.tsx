@@ -55,11 +55,10 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
               "[&_ul]:mb-4",
               "[&_ol]:mb-4",
               "[&_li]:ml-4",
-              "[&_.talk]:flex [&_.talk]:items-start [&_.talk]:gap-4 [&_.talk]:my-6",
-              "[&_.talk-img]:w-24 [&_.talk-img]:h-24 [&_.talk-img]:flex-shrink-0",
-              "[&_.talk-img_img]:w-full [&_.talk-img_img]:h-full [&_.talk-img_img]:rounded-full [&_.talk-img_img]:object-cover",
-              "[&_.talk-balloonR]:flex-1 [&_.talk-balloonR]:relative [&_.talk-balloonR]:bg-blue-50 [&_.talk-balloonR_dark]:bg-slate-800 [&_.talk-balloonR]:p-4 [&_.talk-balloonR]:rounded-lg",
-              "[&_.talk-text]:text-base [&_.talk-text]:leading-relaxed"
+              "[&_blockquote.notion-quote]:border-l-4 [&_blockquote.notion-quote]:border-gray-200 [&_blockquote.notion-quote]:dark:border-gray-700",
+              "[&_blockquote.notion-quote]:pl-4 [&_blockquote.notion-quote]:py-2 [&_blockquote.notion-quote]:my-4",
+              "[&_blockquote.notion-quote]:text-gray-700 [&_blockquote.notion-quote]:dark:text-gray-300",
+              "[&_blockquote.notion-quote]:bg-gray-50 [&_blockquote.notion-quote]:dark:bg-gray-800/50"
             )}
           />
         </div>
