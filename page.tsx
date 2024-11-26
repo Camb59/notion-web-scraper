@@ -13,6 +13,8 @@ import NotionPropertiesSelector from '@/components/NotionPropertiesSelector'
 const mockScrapedContent = {
   title: "サンプルタイトル",
   body: "<p>これはサンプルの本文です。</p><p>複数の段落があります。</p>",
+  url: "https://example.com",
+  date: "2024-01-01"
 }
 
 const mockNotionProperties = [
@@ -70,10 +72,10 @@ export default function Home() {
   }
 
   return (
-    <div className="w-full max-w-none p-4">
+    <div className="w-full p-4">
       <h1 className="text-3xl font-bold text-center mb-6">Notion Web Scraper</h1>
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 w-full max-w-none space-y-6">
+        <div className="flex-1 w-full space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>URLを入力</CardTitle>
@@ -83,7 +85,7 @@ export default function Home() {
             </CardContent>
           </Card>
           {scrapedContent && (
-            <Card className="w-full max-w-none">
+            <Card className="w-full">
               <CardContent>
                 <div className="text-xs text-muted-foreground mb-2">コンテンツプレビュー</div>
                 <ContentPreview content={scrapedContent} onTranslate={handleTranslate} />
@@ -112,4 +114,3 @@ export default function Home() {
     </div>
   )
 }
-

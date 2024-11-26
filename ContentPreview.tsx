@@ -34,15 +34,15 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
 
   const renderContent = (content: { title: string; body: string }, isTranslated: boolean) => {
     return (
-      <article className="w-full max-w-none">
+      <article className="w-full">
         <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight mb-6">
           {content.title}
         </h1>
-        <div className="w-full max-w-none">
+        <div className="w-full">
           <div 
             dangerouslySetInnerHTML={{ __html: content.body }}
             className={cn(
-              "w-full max-w-none",
+              "w-full",
               "[&_img]:w-full [&_img]:h-auto [&_img]:object-contain",
               "[&_figure]:w-full [&_figure]:my-4",
               "[&_figure_img]:w-full [&_figure_img]:h-auto [&_figure_img]:object-contain",
@@ -63,7 +63,7 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
   }
 
   return (
-    <div className="w-full max-w-none">
+    <div className="w-full">
       <Tabs value={viewMode} onValueChange={handleTabChange}>
         <div className="flex justify-center mb-6">
           <TabsList>
@@ -74,13 +74,13 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
         </div>
 
         <TabsContent value="original">
-          <div className="w-full max-w-none">
+          <div className="w-full">
             {renderContent(content, false)}
           </div>
         </TabsContent>
 
         <TabsContent value="translated">
-          <div className="w-full max-w-none">
+          <div className="w-full">
             {isTranslated && translatedContent ? (
               renderContent(translatedContent, true)
             ) : (
@@ -92,11 +92,11 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
         </TabsContent>
 
         <TabsContent value="both">
-          <div className="flex flex-col w-full max-w-none">
-            <div className="w-full max-w-none mb-8">
+          <div className="flex flex-col w-full">
+            <div className="w-full mb-8">
               {renderContent(content, false)}
             </div>
-            <div className="w-full max-w-none">
+            <div className="w-full">
               {isTranslated && translatedContent ? (
                 renderContent(translatedContent, true)
               ) : (
