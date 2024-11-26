@@ -54,10 +54,10 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
           <div 
             dangerouslySetInnerHTML={{ __html: content.body }}
             className={cn(
-              "w-full",
-              "[&_img]:max-w-full [&_img]:h-auto [&_img]:object-contain",
-              "[&_figure]:w-full [&_figure]:my-4",
-              "[&_figure_img]:max-w-full [&_figure_img]:h-auto [&_figure_img]:object-contain",
+              "w-full overflow-x-hidden",
+              "[&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:object-contain [&_img]:mx-auto",
+              "[&_figure]:w-full [&_figure]:my-4 [&_figure]:overflow-hidden",
+              "[&_figure_img]:max-w-full [&_figure_img]:h-auto [&_figure_img]:object-contain [&_figure_img]:mx-auto",
               "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:table-auto",
               "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted",
               "[&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-4",
@@ -102,11 +102,11 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
           </div>
         </TabsContent>
         <TabsContent value="both" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="md:border-r md:pr-8">
+          <div className="w-full space-y-12">
+            <div className="w-full">
               {renderContent(content, false)}
             </div>
-            <div className="md:pl-8">
+            <div className="w-full pt-8 border-t">
               {isTranslated && translatedContent ? (
                 renderContent(translatedContent, true)
               ) : (
