@@ -9,7 +9,7 @@ notion = Client(auth=os.environ["NOTION_TOKEN"])
 def get_database_properties() -> Dict[str, Any]:
     """
     Get all properties from the Notion database with improved error handling
-    and standardized property mapping
+    and standardized property mapping, excluding specific properties
     """
     try:
         database_id = os.environ.get("NOTION_DATABASE_ID")
@@ -34,9 +34,24 @@ def get_database_properties() -> Dict[str, Any]:
             "files": "files"
         }
         
+        # List of properties to exclude
+        excluded_properties = {
+            "AI キーワード",
+            "AI 要約",
+            "Cat１ego１２ry",
+            "Content１Type１１０",
+            "Parent item",
+            "Sub-item",
+            "作成日"
+        }
+        
         # Extract and format properties
         properties = {}
         for prop_name, prop_data in database["properties"].items():
+            # Skip excluded properties
+            if prop_name in excluded_properties:
+                continue
+                
             prop_type = prop_data["type"]
             prop_info = {
                 "id": prop_data["id"],
@@ -90,6 +105,22 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
         
         valid_props = database_props["data"]
         
+        # Get current timestamp for automatic date property
+        current_time = datetime.now().isoformat()
+        
+        # Automatic property mappings
+        auto_properties = {
+            "titlename": {
+                "title": [{"text": {"content": content.title}}]
+            },
+            "日付": {
+                "date": {"start": current_time}
+            },
+            "発言者": {
+                "rich_text": [{"text": {"content": content.author or content.site_name or ""}}]
+            }
+        }
+        
         # Prepare page content
         page_content = {
             "parent": {"database_id": database_id},
@@ -102,7 +133,8 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
                 },
                 "Content": {
                     "rich_text": [{"text": {"content": content.content[:2000] if content.content else ""}}]
-                }
+                },
+                **auto_properties
             }
         }
         

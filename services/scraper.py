@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 
 def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
-    """Extract metadata from the webpage"""
+    """Extract metadata from the webpage with enhanced author and site name detection"""
     metadata = {
         'title': '',
         'description': '',
@@ -19,19 +19,43 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
     
     # Title extraction with fallbacks
     if soup.title:
-        metadata['title'] = soup.title.string
+        metadata['title'] = soup.title.string.strip() if soup.title.string else ''
     
-    # OpenGraph and meta tags
+    # Enhanced meta tags mapping with priority order
     meta_tags = {
+        # High priority tags
+        'article:author': 'author',
+        'dc:creator': 'author',
+        'author': 'author',
+        'og:site_name': 'site_name',
+        
+        # Medium priority tags
         'og:title': 'title',
         'og:description': 'description',
         'og:image': 'header_image',
-        'og:site_name': 'site_name',
-        'article:author': 'author',
         'article:published_time': 'date',
         'description': 'description',
-        'author': 'author',
+        
+        # Additional author-related tags
+        'twitter:creator': 'author',
+        'article:publisher': 'site_name',
+        'publisher': 'site_name',
     }
+    
+    # Additional author detection from schema.org metadata
+    schema_tags = soup.find_all('script', type='application/ld+json')
+    for tag in schema_tags:
+        try:
+            schema_data = json.loads(tag.string)
+            if isinstance(schema_data, dict):
+                if 'author' in schema_data and isinstance(schema_data['author'], dict):
+                    if 'name' in schema_data['author'] and not metadata['author']:
+                        metadata['author'] = schema_data['author']['name']
+                if 'publisher' in schema_data and isinstance(schema_data['publisher'], dict):
+                    if 'name' in schema_data['publisher'] and not metadata['site_name']:
+                        metadata['site_name'] = schema_data['publisher']['name']
+        except (json.JSONDecodeError, AttributeError):
+            continue
     
     for tag in soup.find_all('meta'):
         property_name = tag.get('property', tag.get('name', ''))
