@@ -131,16 +131,14 @@ def scrape_url(url: str) -> Dict[str, str]:
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Extract metadata
+        # Extract metadata and content
         metadata = extract_metadata(soup, url)
-        
-        # Extract main content with improved parsing
         content = extract_main_content(soup, url)
         
-        # Clean and validate all data
+        # データの検証とクリーニング
         cleaned_data = {
             'title': clean_text(metadata.get('title', '')),
-            'content': clean_text(content),
+            'content': content,  # HTMLコンテンツをそのまま保持
             'description': clean_text(metadata.get('description', '')),
             'author': clean_text(metadata.get('author', '')),
             'date': clean_text(metadata.get('date', '')),
@@ -149,14 +147,12 @@ def scrape_url(url: str) -> Dict[str, str]:
             'url': url
         }
         
-        # Verify JSON serialization
-        try:
-            json.dumps(cleaned_data)
-            return cleaned_data
-        except (TypeError, ValueError) as e:
-            logging.error(f"JSON serialization error: {str(e)}")
-            # Convert all values to strings if serialization fails
-            return {k: str(v) for k, v in cleaned_data.items()}
+        # エンコーディング問題の対処
+        for key, value in cleaned_data.items():
+            if isinstance(value, str):
+                cleaned_data[key] = value.encode('utf-8', errors='replace').decode('utf-8')
+        
+        return cleaned_data
             
     except requests.RequestException as e:
         error_msg = f"Network error: {str(e)}"
