@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Web Scraper</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+</head>
+<body>
+    <div class="container py-4">
+        <h1 class="display-4 text-center mb-4">Notion Web Scraper</h1>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <!-- URL Input Form -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">URLを入力</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="urlForm" class="d-flex gap-2">
+                            <input type="url" class="form-control" id="urlInput" placeholder="https://example.com" required>
+                            <button type="submit" class="btn btn-primary">抽出</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Content Preview -->
+                <div id="contentPreview" class="card mb-4 d-none">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">プレビュー</h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" data-view="original">原文</button>
+                            <button type="button" class="btn btn-outline-secondary" data-view="translated">翻訳</button>
+                            <button type="button" class="btn btn-outline-secondary" data-view="both">両方</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="originalContent">
+                            <h2 class="content-title h4"></h2>
+                            <div class="content-body"></div>
+                        </div>
+                        <div id="translatedContent" class="d-none">
+                            <h2 class="content-title h4"></h2>
+                            <div class="content-body"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Notion Properties -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Notionプロパティ</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="propertiesForm">
+                            <!-- Properties will be dynamically added here -->
+                        </form>
+                    </div>
+                </div>
+
+                <button id="saveToNotion" class="btn btn-success w-100" disabled>
+                    Notionに保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <h5 class="modal-title" id="loadingMessage">処理中...</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
