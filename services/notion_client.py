@@ -107,16 +107,23 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
         
         valid_props = database_props["data"]
         
-        # Prepare automatic property mappings
+        # Prepare automatic property mappings with enhanced error handling
+        current_time = datetime.now().isoformat()
         auto_properties = {
             "titlename": {
-                "title": [{"text": {"content": content.title}}]
+                "title": [{"text": {"content": content.title or ""}}]
             },
             "日付": {
-                "date": {"start": datetime.now().isoformat()}
+                "date": {"start": current_time}
+            },
+            "作成日時": {
+                "created_time": current_time
             },
             "発言者": {
                 "rich_text": [{"text": {"content": content.author or content.site_name or ""}}]
+            },
+            "URL": {
+                "url": content.url
             }
         }
         

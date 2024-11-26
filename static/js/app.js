@@ -56,6 +56,29 @@ async function handleUrlSubmit(url) {
         
         currentContentId = data.data.id;
         updatePreview(data.data);
+        
+        // Auto-fill Notion properties
+        const form = document.getElementById('propertiesForm');
+        if (form) {
+            const scrapedData = data.data;
+            
+            // Set URL
+            const urlInput = form.querySelector('#notion_URL');
+            if (urlInput) urlInput.value = scrapedData.url;
+            
+            // Set title
+            const titleInput = form.querySelector('#notion_titlename');
+            if (titleInput) titleInput.value = scrapedData.title;
+            
+            // Set date to current date
+            const dateInput = form.querySelector('#notion_日付');
+            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+            
+            // Set author/site name
+            const authorInput = form.querySelector('#notion_発言者');
+            if (authorInput) authorInput.value = scrapedData.author || scrapedData.site_name || '';
+        }
+        
         document.getElementById('saveToNotion').disabled = false;
         document.getElementById('contentPreview').classList.remove('d-none');
     } catch (error) {
