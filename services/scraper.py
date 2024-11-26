@@ -102,10 +102,14 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
     for heading in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
         if any(word in heading.get_text().lower() for word in ['関連', 'related', 'おすすめ', 'recommend']):
             # 見出し以降の要素を削除
-            current = heading
-            while current.next_sibling:
-                if current.next_sibling:
-                    current.next_sibling.decompose()
+            next_element = heading.next_sibling
+            while next_element:
+                current = next_element
+                next_element = next_element.next_sibling
+                if isinstance(current, str):
+                    current.extract()
+                else:
+                    current.decompose()
             heading.decompose()
 
     # 画像の処理
