@@ -8,6 +8,23 @@ from datetime import datetime
 import json
 import html
 import logging
+import re
+
+def clean_text(text: str) -> str:
+    """Clean and sanitize text content"""
+    if not text:
+        return ""
+    
+    # Decode HTML entities
+    text = html.unescape(text)
+    
+    # Remove control characters
+    text = "".join(char for char in text if ord(char) >= 32 or char in "\n\r\t")
+    
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
 
 def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
     """Extract metadata from the webpage with enhanced author and site name detection"""
@@ -22,7 +39,7 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
     
     # Title extraction with fallbacks
     if soup.title:
-        metadata['title'] = soup.title.string.strip() if soup.title.string else ''
+        metadata['title'] = clean_text(soup.title.string) if soup.title.string else ''
     
     # Enhanced meta tags mapping with priority order
     meta_tags = {
@@ -45,6 +62,14 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
         'publisher': 'site_name',
     }
     
+    # Extract from meta tags
+    for tag in soup.find_all('meta'):
+        property_name = tag.get('property', tag.get('name', ''))
+        if property_name in meta_tags:
+            content = clean_text(tag.get('content', ''))
+            if content and not metadata[meta_tags[property_name]]:
+                metadata[meta_tags[property_name]] = content
+
     # Additional author detection from schema.org metadata
     schema_tags = soup.find_all('script', type='application/ld+json')
     for tag in schema_tags:
@@ -52,44 +77,46 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
             # Clean and sanitize JSON string
             if not tag.string:
                 continue
-                
-            json_str = tag.string.strip()
+            
+            json_str = clean_text(tag.string)
+            
             # Remove any BOM or invalid starting characters
             while json_str and not json_str[0] in '{[':
                 json_str = json_str[1:]
-                
+            
             # Handle empty or invalid JSON
             if not json_str:
                 continue
-                
+            
             schema_data = json.loads(json_str)
             
             if isinstance(schema_data, dict):
                 # Extract author information
-                if 'author' in schema_data and isinstance(schema_data['author'], dict):
-                    if 'name' in schema_data['author'] and not metadata['author']:
-                        author_name = html.unescape(schema_data['author']['name'])
-                        metadata['author'] = author_name.strip()
+                if 'author' in schema_data:
+                    author_data = schema_data['author']
+                    if isinstance(author_data, dict) and 'name' in author_data:
+                        if not metadata['author']:
+                            metadata['author'] = clean_text(author_data['name'])
+                    elif isinstance(author_data, str):
+                        if not metadata['author']:
+                            metadata['author'] = clean_text(author_data)
                 
                 # Extract publisher information
-                if 'publisher' in schema_data and isinstance(schema_data['publisher'], dict):
-                    if 'name' in schema_data['publisher'] and not metadata['site_name']:
-                        site_name = html.unescape(schema_data['publisher']['name'])
-                        metadata['site_name'] = site_name.strip()
-                        
-        except (json.JSONDecodeError, AttributeError) as e:
-            logging.warning(f"Failed to parse JSON-LD: {str(e)}")
+                if 'publisher' in schema_data:
+                    publisher_data = schema_data['publisher']
+                    if isinstance(publisher_data, dict) and 'name' in publisher_data:
+                        if not metadata['site_name']:
+                            metadata['site_name'] = clean_text(publisher_data['name'])
+                    elif isinstance(publisher_data, str):
+                        if not metadata['site_name']:
+                            metadata['site_name'] = clean_text(publisher_data)
+                            
+        except json.JSONDecodeError as e:
+            logging.warning(f"Failed to parse JSON-LD: {str(e)}, content: {json_str[:100]}...")
             continue
         except Exception as e:
             logging.error(f"Unexpected error parsing JSON-LD: {str(e)}")
             continue
-    
-    for tag in soup.find_all('meta'):
-        property_name = tag.get('property', tag.get('name', ''))
-        if property_name in meta_tags:
-            content = tag.get('content', '')
-            if content and not metadata[meta_tags[property_name]]:
-                metadata[meta_tags[property_name]] = content
 
     # Ensure header image is absolute URL
     if metadata['header_image']:
@@ -101,7 +128,7 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
             class_=lambda x: x and any(date_word in x.lower() 
             for date_word in ['date', 'time', 'published', 'posted']))
         for element in date_elements:
-            date_str = element.get('datetime', element.text)
+            date_str = clean_text(element.get('datetime', element.text))
             try:
                 datetime.fromisoformat(date_str.replace('Z', '+00:00'))
                 metadata['date'] = date_str
@@ -138,8 +165,8 @@ def scrape_url(url: str, max_retries: int = 3, retry_delay: int = 1) -> Dict[str
             config.set('DEFAULT', 'INCLUDE_IMAGES', 'True')
             config.set('DEFAULT', 'INCLUDE_LINKS', 'True')
             
-            # Download content
-            downloaded = trafilatura.fetch_url(url)
+            # Download content with timeout
+            downloaded = trafilatura.fetch_url(url, timeout=30)
             if not downloaded:
                 raise Exception("Failed to download content")
             
@@ -165,46 +192,41 @@ def scrape_url(url: str, max_retries: int = 3, retry_delay: int = 1) -> Dict[str
             # Extract metadata
             metadata = extract_metadata(soup, url)
             
-            # Sanitize and clean the extracted content
-            content = main_content if main_content else ''
-            
-            # Clean up the content
-            content = html.unescape(content)  # Convert HTML entities
-            content = content.strip()
-            
-            # Ensure all text fields are properly sanitized
-            clean_metadata = {
-                'title': html.unescape(metadata['title']).strip(),
-                'content': content,
-                'description': html.unescape(metadata['description']).strip(),
-                'author': html.unescape(metadata['author']).strip(),
-                'date': metadata['date'].strip() if metadata['date'] else '',
+            # Clean and sanitize all extracted content
+            cleaned_data = {
+                'title': clean_text(metadata['title']),
+                'content': clean_text(main_content),
+                'description': clean_text(metadata['description']),
+                'author': clean_text(metadata['author']),
+                'date': clean_text(metadata['date']),
                 'header_image': metadata['header_image'].strip(),
-                'site_name': html.unescape(metadata['site_name']).strip()
+                'site_name': clean_text(metadata['site_name']),
+                'url': url
             }
             
-            # Convert to JSON and back to ensure it's properly serializable
+            # Verify JSON serialization
             try:
-                json.dumps(clean_metadata)
-                return clean_metadata
+                json.dumps(cleaned_data)
+                return cleaned_data
             except (TypeError, ValueError) as e:
                 logging.error(f"JSON serialization error: {str(e)}")
-                # If serialization fails, return safely escaped strings
-                return {
-                    'title': str(clean_metadata['title']),
-                    'content': str(clean_metadata['content']),
-                    'description': str(clean_metadata['description']),
-                    'author': str(clean_metadata['author']),
-                    'date': str(clean_metadata['date']),
-                    'header_image': str(clean_metadata['header_image']),
-                    'site_name': str(clean_metadata['site_name'])
-                }
+                # If serialization fails, ensure all values are strings
+                return {k: str(v) for k, v in cleaned_data.items()}
             
+        except requests.RequestException as e:
+            last_error = f"Network error: {str(e)}"
+            logging.error(last_error)
+        except json.JSONDecodeError as e:
+            last_error = f"JSON parsing error: {str(e)}"
+            logging.error(last_error)
         except Exception as e:
             last_error = str(e)
-            if attempt < max_retries - 1:
-                time.sleep(retry_delay)
-                continue
-            break
+            logging.error(f"Error in scrape_url: {last_error}")
+            logging.error(f"Traceback: {traceback.format_exc()}")
+        
+        if attempt < max_retries - 1:
+            time.sleep(retry_delay)
+            continue
+        break
     
     raise Exception(f"Failed to scrape URL after {max_retries} attempts: {last_error}")
