@@ -38,36 +38,22 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
         <h1 className="text-[2.5rem] font-bold leading-tight tracking-tight mb-6">
           {content.title}
         </h1>
-        <div className="flex items-center gap-6 text-base text-muted-foreground mb-6">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            <span>{content.date}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link2 className="h-5 w-5" />
-            <a href={content.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-              ソース
-            </a>
-          </div>
-        </div>
         <div className="w-full">
           <div 
             dangerouslySetInnerHTML={{ __html: content.body }}
             className={cn(
               "w-full",
-              "prose-headings:font-bold prose-headings:tracking-tight",
               "[&>*]:w-full",
-              "[&_img]:w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:object-contain",
-              "[&_figure]:w-full [&_figure]:my-4",
-              "[&_figure_img]:w-full [&_figure_img]:max-w-full [&_figure_img]:h-auto [&_figure_img]:object-contain",
+              "[&_img]:block [&_img]:max-w-full [&_img]:w-auto [&_img]:h-auto [&_img]:mx-auto",
+              "[&_figure]:w-full [&_figure]:my-4 [&_figure]:mx-auto",
+              "[&_figure_img]:block [&_figure_img]:max-w-full [&_figure_img]:w-auto [&_figure_img]:h-auto [&_figure_img]:mx-auto",
               "[&_table]:w-full [&_table]:border-collapse [&_table]:my-4",
-              "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted",
+              "[&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2",
               "[&_h1]:text-4xl [&_h1]:mb-4",
               "[&_h2]:text-3xl [&_h2]:mb-3",
               "[&_h3]:text-2xl [&_h3]:mb-2",
-              "[&_p]:mb-4 [&_ul]:mb-4 [&_ol]:mb-4",
-              "[&_li]:ml-4",
-              "[&_blockquote]:border-l-4 [&_blockquote]:border-muted [&_blockquote]:pl-4"
+              "[&_p]:mb-4",
+              "[&_ul]:mb-4 [&_ol]:mb-4 [&_li]:ml-4"
             )}
           />
         </div>
@@ -85,12 +71,12 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             <TabsTrigger value="both">翻訳文｜原文</TabsTrigger>
           </TabsList>
         </div>
-        <TabsContent value="original" className="mt-6">
+        <TabsContent value="original">
           <div className="w-full">
             {renderContent(content, false)}
           </div>
         </TabsContent>
-        <TabsContent value="translated" className="mt-6">
+        <TabsContent value="translated">
           <div className="w-full">
             {isTranslated && translatedContent ? (
               renderContent(translatedContent, true)
@@ -101,7 +87,7 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
             )}
           </div>
         </TabsContent>
-        <TabsContent value="both" className="mt-6">
+        <TabsContent value="both">
           <div className="grid grid-cols-2 gap-8">
             <div className="border-r pr-8">
               {renderContent(content, false)}
