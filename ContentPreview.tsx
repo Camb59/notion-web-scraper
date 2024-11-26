@@ -56,10 +56,10 @@ export default function ContentPreview({ content, onTranslate }: ContentPreviewP
               "[&_ol]:mb-4",
               "[&_li]:ml-4",
               "[&_.talk]:flex [&_.talk]:items-start [&_.talk]:gap-4 [&_.talk]:my-6",
-              "[&_.talk-img]:w-16 [&_.talk-img]:h-16 [&_.talk-img]:flex-shrink-0",
+              "[&_.talk-img]:w-24 [&_.talk-img]:h-24 [&_.talk-img]:flex-shrink-0",
               "[&_.talk-img_img]:w-full [&_.talk-img_img]:h-full [&_.talk-img_img]:rounded-full [&_.talk-img_img]:object-cover",
-              "[&_.talk-balloonR]:flex-1 [&_.talk-balloonR]:relative [&_.talk-balloonR]:bg-muted [&_.talk-balloonR]:p-4 [&_.talk-balloonR]:rounded-lg",
-              "[&_.talk-text]:text-sm [&_.talk-text]:leading-relaxed"
+              "[&_.talk-balloonR]:flex-1 [&_.talk-balloonR]:relative [&_.talk-balloonR]:bg-blue-50 [&_.talk-balloonR_dark]:bg-slate-800 [&_.talk-balloonR]:p-4 [&_.talk-balloonR]:rounded-lg",
+              "[&_.talk-text]:text-base [&_.talk-text]:leading-relaxed"
             )}
           />
         </div>

@@ -135,11 +135,18 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
                     img['src'] = urljoin(url, img['src'])
                     img['loading'] = 'lazy'
                     img['class'] = 'w-full h-full rounded-full object-cover'
-            
+                img_div['class'] = 'talk-img w-24 h-24 flex-shrink-0'
+        
             # 吹き出しテキストの処理
             balloon_div = talk_div.find('div', class_='talk-balloonR')
             if balloon_div:
-                balloon_div['class'] = balloon_div.get('class', []) + ['flex-1 relative bg-muted p-4 rounded-lg']
+                balloon_div['class'] = 'talk-balloonR flex-1 relative bg-blue-50 dark:bg-slate-800 p-4 rounded-lg'
+                text_div = balloon_div.find('div', class_='talk-text')
+                if text_div:
+                    text_div['class'] = 'talk-text text-base leading-relaxed'
+
+            # トーク全体のスタイリング
+            talk_div['class'] = 'talk flex items-start gap-4 my-6'
 
     # スタイルを維持したまま返す
     return str(main_content)
