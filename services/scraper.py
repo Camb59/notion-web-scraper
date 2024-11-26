@@ -1,123 +1,121 @@
-import os
-import copy
-import logging
-import traceback
-from typing import Dict
-from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from typing import Dict, Optional, Any
+import logging
+import html
+import re
+import traceback
+import json
+from datetime import datetime
 
-def identify_main_content(soup: BeautifulSoup) -> BeautifulSoup:
-    """メインコンテンツと思われる要素を特定"""
-    # よくあるメインコンテンツのセレクタやクラス名
-    selectors = [
-        'article',
-        'main',
-        '#main-content',
-        '.main-content',
-        '.post-content',
-        '.article-content',
-        '.entry-content',
-        '.content'
-    ]
-    
-    for selector in selectors:
-        content = soup.select_one(selector)
-        if content:
-            return content
-    
-    # 最大のテキストコンテンツを持つdivを探す
-    max_text_len = 0
-    main_div = None
-    for div in soup.find_all('div'):
-        text_len = len(div.get_text())
-        if text_len > max_text_len:
-            max_text_len = text_len
-            main_div = div
-    
-    return main_div
-
-def clean_text(text: str) -> str:
-    """テキストのクリーニング"""
+def clean_text(text: Optional[str]) -> str:
     if not text:
         return ""
-    # 余分な空白と改行を削除
-    text = " ".join(text.split())
-    return text
+    
+    try:
+        # Decode HTML entities
+        text = html.unescape(text)
+        
+        # Remove control characters
+        text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\r\t')
+        
+        # Normalize whitespace while preserving meaningful line breaks
+        lines = text.split('\n')
+        cleaned_lines = [re.sub(r'\s+', ' ', line).strip() for line in lines]
+        text = '\n'.join(line for line in cleaned_lines if line)
+        
+        return text
+    except Exception as e:
+        logging.error(f"Error cleaning text: {str(e)}")
+        return str(text) if text else ""
 
 def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
-    """メタデータを抽出"""
-    metadata = {}
+    """Extract metadata from webpage with enhanced error handling"""
+    metadata = {
+        'title': '',
+        'description': '',
+        'author': '',
+        'date': '',
+        'header_image': '',
+        'site_name': ''
+    }
     
-    # タイトルの抽出
-    title = soup.find('meta', {'property': 'og:title'})
-    if not title:
-        title = soup.find('title')
-    metadata['title'] = title.get('content', '') if title and title.get('content') else title.string if title else ''
-
-    # 説明文の抽出
-    description = soup.find('meta', {'property': 'og:description'}) or soup.find('meta', {'name': 'description'})
-    metadata['description'] = description.get('content', '') if description else ''
-
-    # 著者の抽出
-    author = soup.find('meta', {'name': 'author'}) or soup.find('meta', {'property': 'article:author'})
-    metadata['author'] = author.get('content', '') if author else ''
-
-    # 日付の抽出
-    date = (
-        soup.find('meta', {'property': 'article:published_time'}) or
-        soup.find('meta', {'property': 'article:modified_time'}) or
-        soup.find('time')
-    )
-    metadata['date'] = date.get('content', '') if date and date.get('content') else date.get('datetime', '') if date else ''
-
-    # サイト名の抽出
-    site_name = soup.find('meta', {'property': 'og:site_name'})
-    metadata['site_name'] = site_name.get('content', '') if site_name else ''
-
-    # ヘッダー画像の抽出
-    header_image = soup.find('meta', {'property': 'og:image'})
-    if header_image and header_image.get('content'):
-        metadata['header_image'] = urljoin(url, header_image.get('content', ''))
-    
-    return metadata
+    try:
+        # Title extraction with fallbacks
+        if soup.title:
+            metadata['title'] = clean_text(soup.title.string)
+        
+        # Meta tags mapping
+        meta_mapping = {
+            'article:author': 'author',
+            'author': 'author',
+            'og:site_name': 'site_name',
+            'og:title': 'title',
+            'og:description': 'description',
+            'og:image': 'header_image',
+            'article:published_time': 'date',
+            'description': 'description'
+        }
+        
+        # Extract meta tags
+        for tag in soup.find_all('meta'):
+            property_name = tag.get('property', tag.get('name', ''))
+            if property_name in meta_mapping:
+                content = clean_text(tag.get('content', ''))
+                if content and not metadata[meta_mapping[property_name]]:
+                    metadata[meta_mapping[property_name]] = content
+        
+        # Ensure header image is absolute URL
+        if metadata['header_image']:
+            metadata['header_image'] = urljoin(url, metadata['header_image'])
+        
+        return metadata
+    except Exception as e:
+        logging.error(f"Error extracting metadata: {str(e)}")
+        return metadata
 
 def extract_main_content(soup: BeautifulSoup, url: str) -> str:
-    # メインコンテンツを取得
-    main_content = soup.find('div', {'itemprop': 'articleBody'})
-    if not main_content:
-        main_content = identify_main_content(soup)
-    
-    if not main_content:
-        raise Exception("メインコンテンツが見つかりませんでした")
+    # メインコンテンツの検出を改善
+    main_content = None
+    for selector in [
+        'article', 'main', 
+        '[role="main"]', 
+        '#main-content', 
+        '.main-content',
+        '.post-content',
+        '.entry-content'
+    ]:
+        main_content = soup.select_one(selector)
+        if main_content:
+            break
 
-    # コンテンツのクローンを作成して処理
-    main_content = copy.deepcopy(main_content)
+    if not main_content:
+        main_content = soup.find('div', class_=lambda x: x and any(
+            word in str(x).lower() for word in ['content', 'article', 'entry', 'post']
+        ))
+
+    if not main_content:
+        main_content = soup
 
     # 不要な要素を削除
+    # Remove col-sm-8 class from articleBody elements
+    for article_body in main_content.find_all('div', {'itemprop': 'articleBody'}):
+        if article_body.get('class'):
+            classes = article_body['class']
+            if 'col-sm-8' in classes:
+                classes.remove('col-sm-8')
+            article_body['class'] = ' '.join(classes)
     for element in main_content.find_all(['script', 'style', 'iframe', 'nav', 'header', 'footer', 'aside']):
         element.decompose()
 
-    # 関連記事セクションを検出して削除（見出しタグのみを対象）
-    for heading in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-        if any(word in heading.get_text().lower() for word in ['関連', 'related', 'おすすめ', 'recommend']):
-            # 見出し以降の要素を削除
-            next_element = heading.next_sibling
-            while next_element:
-                current = next_element
-                next_element = next_element.next_sibling
-                if isinstance(current, str):
-                    current.extract()
-                else:
-                    current.decompose()
-            heading.decompose()
-
-    # 画像の処理
+    # 画像の処理を改善
     for img in main_content.find_all('img'):
         if img.get('src'):
             img['src'] = urljoin(url, img['src'])
             img['loading'] = 'lazy'
-        if img.get('data-src'):
+            img['style'] = 'max-width: 100%; height: auto; display: block; margin: 0 auto;'
+        if img.get('data-src'):  # 遅延読み込み対応
             img['src'] = urljoin(url, img['data-src'])
 
     # テーブルの処理を改善
@@ -126,19 +124,20 @@ def extract_main_content(soup: BeautifulSoup, url: str) -> str:
         for cell in table.find_all(['td', 'th']):
             cell['class'] = 'border p-2'
 
-    # トーク形式を引用ブロックに変換
+    # トーク形式の処理を引用ブロックに変更
     for talk_div in main_content.find_all('div', class_='talk'):
         if talk_div:
-            text_content = talk_div.get_text(strip=True)
-            if text_content:
-                blockquote = soup.new_tag('blockquote')
-                blockquote['class'] = 'notion-quote'
-                blockquote.string = text_content
-                talk_div.replace_with(blockquote)
-
-    # デバッグ用にログ出力
-    logging.debug(f"Extracted content length: {len(str(main_content))}")
-    logging.debug(f"Content preview: {str(main_content)[:500]}")
+            # テキスト部分を取得
+            balloon_div = talk_div.find('div', class_='talk-balloonR')
+            if balloon_div:
+                text_div = balloon_div.find('div', class_='talk-text')
+                if text_div:
+                    # 新しい引用ブロックを作成
+                    blockquote = soup.new_tag('blockquote')
+                    blockquote['class'] = 'notion-quote'
+                    blockquote.string = text_div.get_text()
+                    # 元の吹き出しを引用ブロックで置き換え
+                    talk_div.replace_with(blockquote)
 
     # スタイルを維持したまま返す
     return str(main_content)
