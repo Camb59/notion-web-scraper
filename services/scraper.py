@@ -1,9 +1,7 @@
-import trafilatura
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from typing import Dict, Optional, Any
-import time
 import logging
 import html
 import re
@@ -86,85 +84,57 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> Dict[str, str]:
         logging.error(f"Error extracting metadata: {str(e)}")
         return metadata
 
-def scrape_url(url: str, max_retries: int = 3, retry_delay: int = 1) -> Dict[str, str]:
-    """
-    Scrape content from URL with improved error handling and retries
-    
-    Args:
-        url: The URL to scrape
-        max_retries: Maximum number of retry attempts
-        retry_delay: Delay between retries in seconds
+def scrape_url(url: str) -> Dict[str, str]:
+    """Scrape content from URL with improved error handling"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
         
-    Returns:
-        Dict containing scraped content
+        soup = BeautifulSoup(response.text, 'html.parser')
         
-    Raises:
-        Exception: If scraping fails after all retries
-    """
-    logging.info(f"Starting to scrape URL: {url}")
-    last_error = None
-    
-    for attempt in range(max_retries):
+        # Extract metadata
+        metadata = extract_metadata(soup, url)
+        
+        # Extract main content (prioritize main or article tags)
+        content = ''
+        main_content = soup.find('main') or soup.find('article')
+        if main_content:
+            content = main_content.get_text(separator='\n', strip=True)
+        else:
+            # Fallback: look for content-like sections
+            content_tags = soup.find_all(['p', 'div'], class_=lambda x: x and any(word in str(x).lower() for word in ['content', 'article', 'entry', 'post']))
+            content = '\n'.join(tag.get_text(strip=True) for tag in content_tags)
+        
+        # Clean and validate all data
+        cleaned_data = {
+            'title': clean_text(metadata.get('title', '')),
+            'content': clean_text(content),
+            'description': clean_text(metadata.get('description', '')),
+            'author': clean_text(metadata.get('author', '')),
+            'date': clean_text(metadata.get('date', '')),
+            'header_image': metadata.get('header_image', ''),
+            'site_name': clean_text(metadata.get('site_name', '')),
+            'url': url
+        }
+        
+        # Verify JSON serialization
         try:
-            # Download content
-            downloaded = trafilatura.fetch_url(url)
-            if not downloaded:
-                raise Exception("コンテンツのダウンロードに失敗しました")
+            json.dumps(cleaned_data)
+            return cleaned_data
+        except (TypeError, ValueError) as e:
+            logging.error(f"JSON serialization error: {str(e)}")
+            # Convert all values to strings if serialization fails
+            return {k: str(v) for k, v in cleaned_data.items()}
             
-            # Extract main content with safeguards
-            main_content = trafilatura.extract(
-                downloaded,
-                include_images=True,
-                include_links=True,
-                include_tables=True,
-                output_format='html',
-                with_metadata=True,
-                target_language='ja',
-                url=url,  # Add URL for better link handling
-                favor_precision=True,
-                include_formatting=True
-            )
-            
-            if not main_content:
-                raise Exception("コンテンツの抽出に失敗しました")
-            
-            # Parse with BeautifulSoup for metadata
-            soup = BeautifulSoup(downloaded, 'html.parser')
-            metadata = extract_metadata(soup, url)
-            
-            # Clean and validate all data
-            cleaned_data = {
-                'title': clean_text(metadata.get('title', '')),
-                'content': clean_text(main_content),
-                'description': clean_text(metadata.get('description', '')),
-                'author': clean_text(metadata.get('author', '')),
-                'date': clean_text(metadata.get('date', '')),
-                'header_image': metadata.get('header_image', ''),
-                'site_name': clean_text(metadata.get('site_name', '')),
-                'url': url
-            }
-            
-            # Verify JSON serialization
-            try:
-                json.dumps(cleaned_data)
-                return cleaned_data
-            except (TypeError, ValueError) as e:
-                logging.error(f"JSON serialization error: {str(e)}")
-                # Convert all values to strings if serialization fails
-                return {k: str(v) for k, v in cleaned_data.items()}
-                
-        except requests.RequestException as e:
-            last_error = f"Network error: {str(e)}"
-            logging.error(f"Network error on attempt {attempt + 1}: {str(e)}")
-        except Exception as e:
-            last_error = str(e)
-            logging.error(f"Error in scrape_url (attempt {attempt + 1}): {str(e)}")
-            logging.error(f"Traceback: {traceback.format_exc()}")
-        
-        if attempt < max_retries - 1:
-            logging.info(f"Waiting {retry_delay} seconds before retry")
-            time.sleep(retry_delay)
-    
-    error_msg = f"Failed to scrape URL after {max_retries} attempts: {last_error}"
-    logging.error(error_msg)
-    raise Exception(error_msg)
+    except requests.RequestException as e:
+        error_msg = f"Network error: {str(e)}"
+        logging.error(error_msg)
+        raise Exception(error_msg)
+    except Exception as e:
+        error_msg = f"Scraping error: {str(e)}"
+        logging.error(f"Error in scrape_url: {error_msg}")
+        logging.error(f"Traceback: {traceback.format_exc()}")
+        raise Exception(error_msg)
