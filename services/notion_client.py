@@ -80,36 +80,37 @@ def get_database_properties() -> Dict[str, Any]:
             # Add relation properties
             if prop_type == "relation":
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
-                try:
-                    # リレーション先のデータベース情報を取得
-                    related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
-                    prop_info["database_title"] = related_db["title"][0]["plain_text"]
-                    
-                    # データベースの全ページを取得
-                    pages = notion.databases.query(
-                        database_id=prop_info["database_id"]
-                    ).get("results", [])
-                    
-                    # ページのタイトルを選択肢として追加
-                    prop_info["options"] = []
-                    for page in pages:
-                        properties = page.get("properties", {})
-                        title_prop = next((prop for prop in properties.values() if prop["type"] == "title"), None)
-                        if title_prop and title_prop["title"]:
-                            title = title_prop["title"][0]["plain_text"]
-                            prop_info["options"].append({
-                                "label": title,
-                                "value": page["id"]
-                            })
-                    
-                    prop_info["type"] = "relation_select"
-                    logging.info(f"リレーションプロパティ {prop_name} から {len(prop_info['options'])} 件のページを取得")
-                    
-                except Exception as e:
-                    logging.error(f"リレーションデータベース {prop_info['database_id']} の処理エラー: {str(e)}")
-                    logging.error(traceback.format_exc())
-                    prop_info["options"] = []
-                    prop_info["database_title"] = "Unknown Database"
+                # 特定のデータベースIDの場合の処理
+                if prop_info["database_id"] == "b490d673329444baab6badf517e72292":
+                    try:
+                        # データベースの全ページを取得
+                        pages = notion.databases.query(
+                            database_id=prop_info["database_id"]
+                        ).get("results", [])
+                        
+                        # ページのタイトルを選択肢として追加
+                        prop_info["options"] = []
+                        for page in pages:
+                            title = page["properties"].get("title", {}).get("title", [])
+                            if title:
+                                page_title = title[0]["plain_text"]
+                                prop_info["options"].append({
+                                    "label": page_title,
+                                    "value": page["id"]
+                                })
+                        
+                        prop_info["type"] = "relation_select"
+                    except Exception as e:
+                        logging.error(f"関連データベースのページ取得エラー: {str(e)}")
+                        prop_info["options"] = []
+                else:
+                    # Fetch related database title for other databases
+                    try:
+                        related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
+                        prop_info["database_title"] = related_db["title"][0]["plain_text"]
+                    except Exception as e:
+                        logging.error(f"関連データベースの取得エラー: {str(e)}")
+                        prop_info["database_title"] = "Unknown Database"
             
             properties[prop_name] = prop_info
             
