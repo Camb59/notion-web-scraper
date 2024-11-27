@@ -123,13 +123,20 @@ export default function NotionPropertiesSelector({ onPropertyChange }: NotionPro
   const fetchNotionProperties = async () => {
     try {
       const response = await fetch('/api/notion/properties')
-      if (!response.ok) throw new Error('Failed to fetch Notion properties')
       const data = await response.json()
-      if (data.status === 'success') {
-        setProperties(Object.values(data.data))
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch Notion properties')
+      }
+      
+      if (data.status === 'success' && data.data) {
+        const formattedProperties = Object.values(data.data)
+        console.log('Fetched properties:', formattedProperties)
+        setProperties(formattedProperties)
       }
     } catch (error) {
       console.error('Error fetching Notion properties:', error)
+      // TODO: Show error message to user
     }
   }
 

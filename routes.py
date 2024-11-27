@@ -105,22 +105,29 @@ def translate():
 @app.route('/api/notion/properties', methods=['GET'])
 def get_notion_properties():
     """Get all properties from the Notion database"""
-    from services.notion_client import get_database_properties
-    result = get_database_properties()
-    
-    if result["status"] == "error":
-        error_code = 400 if result["type"] == "validation_error" else 500
+    try:
+        from services.notion_client import get_database_properties
+        result = get_database_properties()
+        
+        if result["status"] == "error":
+            error_code = 400 if result["type"] == "validation_error" else 500
+            return jsonify({
+                "status": "error",
+                "message": result["error"],
+                "type": result["type"],
+                "details": result.get("details")
+            }), error_code
+        
+        return jsonify({
+            "status": "success",
+            "data": result["data"]
+        })
+    except Exception as e:
+        logging.error(f"Error: {str(e)}")
         return jsonify({
             "status": "error",
-            "message": result["error"],
-            "type": result["type"],
-            "details": result.get("details")
-        }), error_code
-    
-    return jsonify({
-        "status": "success",
-        "data": result["data"]
-    })
+            "message": str(e)
+        }), 500
 
 @app.route('/api/save-to-notion', methods=['POST'])
 def save_to_notion():
