@@ -80,38 +80,29 @@ def get_database_properties() -> Dict[str, Any]:
             # Add relation properties
             if prop_type == "relation":
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
-                try:
-                    # データベースの全ページを取得
-                    relation_database_id = prop_data["relation"]["database_id"]
-                    pages = notion.databases.query(
-                        database_id=relation_database_id,
-                        page_size=100  # 最大100ページまで取得
-                    ).get("results", [])
-                    
-                    # ページのタイトルを選択肢として追加
-                    prop_info["options"] = []
-                    for page in pages:
-                        # タイトルプロパティを取得
-                        properties = page.get("properties", {})
-                        title = None
+                # 特定のデータベースIDの場合の処理
+                if prop_info["database_id"] == "b490d673329444baab6badf517e72292":
+                    try:
+                        # データベースの全ページを取得
+                        pages = notion.databases.query(
+                            database_id=prop_info["database_id"]
+                        ).get("results", [])
                         
-                        # 全プロパティから最初のtitleタイプを探す
-                        for prop in properties.values():
-                            if prop["type"] == "title" and prop["title"]:
-                                title = prop["title"][0]["plain_text"]
-                                break
+                        # ページのタイトルを選択肢として追加
+                        prop_info["options"] = []
+                        for page in pages:
+                            title = page["properties"].get("title", {}).get("title", [])
+                            if title:
+                                page_title = title[0]["plain_text"]
+                                prop_info["options"].append({
+                                    "label": page_title,
+                                    "value": page["id"]
+                                })
                         
-                        if title:
-                            prop_info["options"].append({
-                                "label": title,
-                                "value": page["id"]
-                            })
-                    
-                    prop_info["type"] = "relation_select"
-                    logging.info(f"Retrieved {len(prop_info['options'])} pages from relation database")
-                except Exception as e:
-                    logging.error(f"関連データベースのページ取得エラー: {str(e)}")
-                    prop_info["options"] = []
+                        prop_info["type"] = "relation_select"
+                    except Exception as e:
+                        logging.error(f"関連データベースのページ取得エラー: {str(e)}")
+                        prop_info["options"] = []
                 else:
                     # Fetch related database title for other databases
                     try:
