@@ -1,9 +1,41 @@
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
 .env
 .env.*
+env/
 venv/
+.venv/
+ENV/
 .vscode/
 *.log
 .DS_Store
 node_modules/
+instance/
+.webassets-cache
+*.sqlite
+*.db
+
+# Notion credentials
+.notion.cfg
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE specific files
+.idea/
+*.swp
+*.swo
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
