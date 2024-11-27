@@ -82,8 +82,9 @@ def get_database_properties() -> Dict[str, Any]:
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
                 try:
                     # データベースの全ページを取得
+                    relation_database_id = prop_data["relation"]["database_id"]
                     pages = notion.databases.query(
-                        database_id="b490d673329444baab6badf517e72292",
+                        database_id=relation_database_id,
                         page_size=100  # 最大100ページまで取得
                     ).get("results", [])
                     
@@ -91,11 +92,18 @@ def get_database_properties() -> Dict[str, Any]:
                     prop_info["options"] = []
                     for page in pages:
                         # タイトルプロパティを取得
-                        title_prop = page["properties"].get("titlename", {}).get("title", [])
-                        if title_prop:
-                            page_title = title_prop[0]["plain_text"]
+                        properties = page.get("properties", {})
+                        title = None
+                        
+                        # 全プロパティから最初のtitleタイプを探す
+                        for prop in properties.values():
+                            if prop["type"] == "title" and prop["title"]:
+                                title = prop["title"][0]["plain_text"]
+                                break
+                        
+                        if title:
                             prop_info["options"].append({
-                                "label": page_title,
+                                "label": title,
                                 "value": page["id"]
                             })
                     
