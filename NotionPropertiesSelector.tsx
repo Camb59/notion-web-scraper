@@ -26,6 +26,8 @@ interface NotionProperty {
   name: string
   type: string
   options?: { label: string; value: string }[]
+  database_id?: string
+  database_title?: string
 }
 
 interface NotionPropertiesSelectorProps {
@@ -256,15 +258,37 @@ export default function NotionPropertiesSelector({ onPropertyChange }: NotionPro
                                   ))}
                                 </SelectContent>
                               </Select>
+                            ) : property.type === 'relation_select' ? (
+                              <Select
+                                value={selectedValues[property.id]}
+                                onValueChange={(value) => handlePropertyChange(property.id, value)}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder={`関連ページを選択`} />
+                                </SelectTrigger>
+                                <SelectContent className={cn(
+                                  "max-h-[200px]",
+                                  "overflow-y-auto"
+                                )}>
+                                  {property.options?.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             ) : (
                               <Select
                                 value={selectedValues[property.id]}
                                 onValueChange={(value) => handlePropertyChange(property.id, value)}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full">
                                   <SelectValue placeholder={`${property.name}を選択`} />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className={cn(
+                                  "max-h-[200px]",
+                                  "overflow-y-auto"
+                                )}>
                                   {property.options?.map(option => (
                                     <SelectItem key={option.value} value={option.value}>
                                       {option.label}
