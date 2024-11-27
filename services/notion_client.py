@@ -80,55 +80,37 @@ def get_database_properties() -> Dict[str, Any]:
             # Add relation properties
             if prop_type == "relation":
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
-                try:
-                    # 特定のデータベースIDの場合の処理を追加
-                    if prop_info["database_id"] == "b490d673329444baab6badf517e72292":
-                        logging.info(f"リレーション先のデータベースにアクセス: {prop_info['database_id']}")
-                        
-                        # データベースの情報を取得
-                        related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
-                        
-                        # ページ一覧を取得（ページサイズを増やして確実に取得）
-                        pages = []
-                        has_more = True
-                        next_cursor = None
-                        
-                        while has_more:
-                            response = notion.databases.query(
-                                database_id=prop_info["database_id"],
-                                start_cursor=next_cursor,
-                                page_size=100
-                            )
-                            pages.extend(response["results"])
-                            has_more = response["has_more"]
-                            next_cursor = response["next_cursor"] if has_more else None
+                # 特定のデータベースIDの場合の処理
+                if prop_info["database_id"] == "b490d673329444baab6badf517e72292":
+                    try:
+                        # データベースの全ページを取得
+                        pages = notion.databases.query(
+                            database_id=prop_info["database_id"]
+                        ).get("results", [])
                         
                         # ページのタイトルを選択肢として追加
                         prop_info["options"] = []
                         for page in pages:
-                            # プロパティからタイトルを取得
-                            for prop_value in page["properties"].values():
-                                if prop_value["type"] == "title" and prop_value["title"]:
-                                    title = prop_value["title"][0]["plain_text"]
-                                    prop_info["options"].append({
-                                        "label": title,
-                                        "value": page["id"]
-                                    })
-                                    break
+                            title = page["properties"].get("title", {}).get("title", [])
+                            if title:
+                                page_title = title[0]["plain_text"]
+                                prop_info["options"].append({
+                                    "label": page_title,
+                                    "value": page["id"]
+                                })
                         
-                        logging.info(f"取得したページ数: {len(prop_info['options'])}")
                         prop_info["type"] = "relation_select"
-                        prop_info["database_title"] = related_db["title"][0]["plain_text"]
-                        
-                    else:
-                        prop_info["type"] = "relation"
+                    except Exception as e:
+                        logging.error(f"関連データベースのページ取得エラー: {str(e)}")
                         prop_info["options"] = []
-                        
-                except Exception as e:
-                    logging.error(f"リレーションデータベースの取得エラー: {str(e)}")
-                    logging.error(traceback.format_exc())
-                    prop_info["options"] = []
-                    prop_info["type"] = "relation"
+                else:
+                    # Fetch related database title for other databases
+                    try:
+                        related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
+                        prop_info["database_title"] = related_db["title"][0]["plain_text"]
+                    except Exception as e:
+                        logging.error(f"関連データベースの取得エラー: {str(e)}")
+                        prop_info["database_title"] = "Unknown Database"
             
             properties[prop_name] = prop_info
             
