@@ -80,13 +80,37 @@ def get_database_properties() -> Dict[str, Any]:
             # Add relation properties
             if prop_type == "relation":
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
-                # Fetch related database title
-                try:
-                    related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
-                    prop_info["database_title"] = related_db["title"][0]["plain_text"]
-                except Exception as e:
-                    logging.error(f"関連データベースの取得エラー: {str(e)}")
-                    prop_info["database_title"] = "Unknown Database"
+                # 特定のデータベースIDの場合の処理
+                if prop_info["database_id"] == "b490d673329444baab6badf517e72292":
+                    try:
+                        # データベースの全ページを取得
+                        pages = notion.databases.query(
+                            database_id=prop_info["database_id"]
+                        ).get("results", [])
+                        
+                        # ページのタイトルを選択肢として追加
+                        prop_info["options"] = []
+                        for page in pages:
+                            title = page["properties"].get("title", {}).get("title", [])
+                            if title:
+                                page_title = title[0]["plain_text"]
+                                prop_info["options"].append({
+                                    "label": page_title,
+                                    "value": page["id"]
+                                })
+                        
+                        prop_info["type"] = "relation_select"
+                    except Exception as e:
+                        logging.error(f"関連データベースのページ取得エラー: {str(e)}")
+                        prop_info["options"] = []
+                else:
+                    # Fetch related database title for other databases
+                    try:
+                        related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
+                        prop_info["database_title"] = related_db["title"][0]["plain_text"]
+                    except Exception as e:
+                        logging.error(f"関連データベースの取得エラー: {str(e)}")
+                        prop_info["database_title"] = "Unknown Database"
             
             properties[prop_name] = prop_info
             
@@ -187,6 +211,10 @@ def create_notion_page(content: Any, properties: Dict[str, Any]) -> Dict[str, An
                     elif prop_type == "date":
                         page_content["properties"][prop_name] = {
                             "date": {"start": str(prop_value)}
+                        }
+                    elif prop_type == "relation_select":
+                        page_content["properties"][prop_name] = {
+                            "relation": [{"id": str(prop_value)}]
                         }
             except Exception as e:
                 logging.error(f"プロパティのフォーマットエラー {prop_name}: {str(e)}")
