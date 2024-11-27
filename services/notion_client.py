@@ -80,21 +80,32 @@ def get_database_properties() -> Dict[str, Any]:
             # Add relation properties
             if prop_type == "relation":
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
-                # リレーションデータベースからページを取得
                 try:
+                    # リレーションデータベースからページを取得
+                    related_database_id = os.environ.get("NOTION_DATABASE_ID")  # 環境変数から取得
+                    if not related_database_id:
+                        raise ValueError("NOTION_DATABASE_IDが設定されていません")
+                        
                     pages = notion.databases.query(
-                        database_id="b490d673329444baab6badf517e72292"
+                        database_id=related_database_id
                     ).get("results", [])
                     
                     # ページのタイトルを選択肢として追加
                     prop_info["options"] = []
                     for page in pages:
                         # タイトルプロパティを取得
-                        title_prop = page["properties"].get("名前", {}).get("title", [])
-                        if title_prop:
-                            page_title = title_prop[0]["plain_text"]
+                        properties = page.get("properties", {})
+                        title = None
+                        
+                        # タイトルを探索
+                        for prop in properties.values():
+                            if prop["type"] == "title" and prop["title"]:
+                                title = prop["title"][0]["plain_text"]
+                                break
+                        
+                        if title:
                             prop_info["options"].append({
-                                "label": page_title,
+                                "label": title,
                                 "value": page["id"]
                             })
                     
