@@ -79,16 +79,21 @@ def get_database_properties() -> Dict[str, Any]:
 
             # Add relation properties
             if prop_type == "relation":
+                logging.info(f"Processing relation property: {prop_name}")
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
+                logging.info(f"Related database ID: {prop_info['database_id']}")
+                
                 # 特定のデータベースIDの場合の処理
                 if prop_info["database_id"] == "b490d673329444baab6badf517e72292":
                     try:
-                        # データベースの全ページを取得
+                        # Query related database
+                        logging.info("Attempting to query related database")
                         pages = notion.databases.query(
                             database_id=prop_info["database_id"]
                         ).get("results", [])
+                        logging.info(f"Retrieved {len(pages)} pages from related database")
                         
-                        # ページのタイトルを選択肢として追加
+                        # Process pages
                         prop_info["options"] = []
                         for page in pages:
                             title = page["properties"].get("title", {}).get("title", [])
@@ -98,10 +103,12 @@ def get_database_properties() -> Dict[str, Any]:
                                     "label": page_title,
                                     "value": page["id"]
                                 })
+                                logging.info(f"Added page option: {page_title}")
                         
                         prop_info["type"] = "relation_select"
                     except Exception as e:
-                        logging.error(f"関連データベースのページ取得エラー: {str(e)}")
+                        logging.error(f"Error processing relation property: {str(e)}")
+                        logging.error(f"Full error details: {traceback.format_exc()}")
                         prop_info["options"] = []
                 else:
                     # Fetch related database title for other databases
