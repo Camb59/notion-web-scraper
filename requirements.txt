@@ -7,3 +7,11 @@ notion-client>=2.2.1
 beautifulsoup4>=4.12.3
 requests>=2.32.3
 sqlalchemy>=2.0.36
+beautifulsoup4
+flask
+flask-sqlalchemy
+notion-client
+psycopg2-binary
+requests
+sqlalchemy
+trafilatura
