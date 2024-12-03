@@ -11,6 +11,10 @@ class Base(DeclarativeBase):
 db = SQLAlchemy(model_class=Base)
 app = Flask(__name__)
 
+# Static folder configuration
+app.static_folder = 'static'
+app.static_url_path = '/static'
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
