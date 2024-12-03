@@ -1,0 +1,25 @@
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 719-007-554
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:02] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:03] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:03] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:04] "GET /static/js/app.js HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:04] "GET /static/js/app.js HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:05] "GET /static/js/app.js HTTP/1.1" 200 -
+INFO:httpx:HTTP Request: GET https://api.notion.com/v1/databases/dadf171c0c7f473e8ce2568d9997739a "HTTP/1.1 200 OK"
+INFO:root:Processing relation property: DATABASEからのリレーション
+INFO:root:Related database ID: dadf171c-0c7f-473e-8ce2-568d9997739a
+INFO:httpx:HTTP Request: GET https://api.notion.com/v1/databases/dadf171c-0c7f-473e-8ce2-568d9997739a "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://api.notion.com/v1/databases/dadf171c0c7f473e8ce2568d9997739a "HTTP/1.1 200 OK"
+INFO:root:Processing relation property: DATABASEからのリレーション
+INFO:root:Related database ID: dadf171c-0c7f-473e-8ce2-568d9997739a
+INFO:httpx:HTTP Request: GET https://api.notion.com/v1/databases/dadf171c0c7f473e8ce2568d9997739a "HTTP/1.1 200 OK"
+INFO:root:Processing relation property: DATABASEからのリレーション
+INFO:root:Related database ID: dadf171c-0c7f-473e-8ce2-568d9997739a
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:06] "GET /api/notion/properties HTTP/1.1" 200 -
+INFO:httpx:HTTP Request: GET https://api.notion.com/v1/databases/dadf171c-0c7f-473e-8ce2-568d9997739a "HTTP/1.1 200 OK"
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:07] "GET /api/notion/properties HTTP/1.1" 200 -
+INFO:httpx:HTTP Request: GET https://api.notion.com/v1/databases/dadf171c-0c7f-473e-8ce2-568d9997739a "HTTP/1.1 200 OK"
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:20:08] "GET /api/notion/properties HTTP/1.1" 200 -
+INFO:werkzeug:172.31.196.28 - - [03/Dec/2024 06:28:26] "POST /api/scrape HTTP/1.1" 200 -

@@ -83,41 +83,31 @@ def get_database_properties() -> Dict[str, Any]:
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
                 logging.info(f"Related database ID: {prop_info['database_id']}")
                 
-                # 特定のデータベースIDの場合の処理
-                if prop_info["database_id"] == "b490d673329444baab6badf517e72292":
-                    try:
-                        # Query related database
-                        logging.info("Attempting to query related database")
-                        pages = notion.databases.query(
-                            database_id=prop_info["database_id"]
-                        ).get("results", [])
-                        logging.info(f"Retrieved {len(pages)} pages from related database")
-                        
-                        # Process pages
-                        prop_info["options"] = []
-                        for page in pages:
-                            title = page["properties"].get("title", {}).get("title", [])
-                            if title:
-                                page_title = title[0]["plain_text"]
-                                prop_info["options"].append({
-                                    "label": page_title,
-                                    "value": page["id"]
-                                })
-                                logging.info(f"Added page option: {page_title}")
-                        
-                        prop_info["type"] = "relation_select"
-                    except Exception as e:
-                        logging.error(f"Error processing relation property: {str(e)}")
-                        logging.error(f"Full error details: {traceback.format_exc()}")
-                        prop_info["options"] = []
-                else:
-                    # Fetch related database title for other databases
-                    try:
-                        related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
-                        prop_info["database_title"] = related_db["title"][0]["plain_text"]
-                    except Exception as e:
-                        logging.error(f"関連データベースの取得エラー: {str(e)}")
-                        prop_info["database_title"] = "Unknown Database"
+                try:
+                    # Query related database
+                    logging.info("Attempting to query related database")
+                    pages = notion.databases.query(
+                        database_id=prop_info["database_id"]
+                    ).get("results", [])
+                    logging.info(f"Retrieved {len(pages)} pages from related database")
+                    
+                    # Process pages
+                    prop_info["options"] = []
+                    for page in pages:
+                        title = page["properties"].get("title", {}).get("title", [])
+                        if title:
+                            page_title = title[0]["plain_text"]
+                            prop_info["options"].append({
+                                "label": page_title,
+                                "value": page["id"]
+                            })
+                            logging.info(f"Added page option: {page_title}")
+                    
+                    prop_info["type"] = "relation_select"
+                except Exception as e:
+                    logging.error(f"Error processing relation property: {str(e)}")
+                    logging.error(f"Full error details: {traceback.format_exc()}")
+                    prop_info["options"] = []
             
             properties[prop_name] = prop_info
             
