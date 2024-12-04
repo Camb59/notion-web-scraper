@@ -81,44 +81,44 @@ def get_database_properties() -> Dict[str, Any]:
             if prop_type == "relation":
                 logging.info(f"Processing relation property: {prop_name}")
                 prop_info["database_id"] = prop_data["relation"]["database_id"]
+                # ハイフン付きフォーマットに変換
+                if "-" not in prop_info["database_id"]:
+                    formatted_id = f"{prop_info['database_id'][:8]}-{prop_info['database_id'][8:12]}-{prop_info['database_id'][12:16]}-{prop_info['database_id'][16:20]}-{prop_info['database_id'][20:]}"
+                    prop_info["database_id"] = formatted_id
                 logging.info(f"Related database ID: {prop_info['database_id']}")
                 
                 try:
-                    # Query related database
+                    # 関連データベースの取得を試みる
                     related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
                     pages = notion.databases.query(
                         database_id=prop_info["database_id"],
-                        page_size=100  # 取得するページ数を増やす
+                        page_size=100
                     ).get("results", [])
-                    logging.info(f"Retrieved {len(pages)} pages from related database")
                     
-                    # Process pages with proper property access
+                    # ページのプロパティを処理
                     prop_info["options"] = []
                     for page in pages:
-                        # ページのプロパティから適切なタイトルを取得
                         properties = page.get("properties", {})
-                        title_prop = next((
-                            prop for prop in properties.values() 
-                            if prop["type"] == "title"
-                        ), None)
+                        # タイトルプロパティを検索
+                        title_prop = None
+                        for prop in properties.values():
+                            if prop["type"] == "title":
+                                title_prop = prop
+                                break
                         
-                        if title_prop and title_prop.get("title"):
+                        if title_prop and title_prop["title"]:
                             title = title_prop["title"][0]["text"]["content"]
                             prop_info["options"].append({
                                 "label": title,
                                 "value": page["id"]
                             })
-                            logging.info(f"Added page option: {title}")
+                            logging.info(f"Added relation option: {title}")
                     
                     prop_info["type"] = "relation_select"
                     
-                    # Add debug logs
-                    logging.debug(f"Page properties: {properties}")
-                    logging.debug(f"Formatted properties: {prop_info}")
-                    
                 except Exception as e:
-                    logging.error(f"Error processing relation property: {str(e)}")
-                    logging.error(f"Full error details: {traceback.format_exc()}")
+                    logging.error(f"Error processing relation: {str(e)}")
+                    logging.error(traceback.format_exc())
                     prop_info["options"] = []
             
             properties[prop_name] = prop_info

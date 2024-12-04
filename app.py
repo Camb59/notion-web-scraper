@@ -4,6 +4,8 @@ from sqlalchemy import text
 import logging
 import os
 import sys
+import traceback
+import socket
 
 # Configure logging
 logging.basicConfig(
@@ -74,14 +76,46 @@ with app.app_context():
         logger.error(f'Error during database setup: {str(e)}')
         raise
 
+def find_available_port(start_port=5000, max_attempts=10):
+    """Find an available port starting from start_port"""
+    for port in range(start_port, start_port + max_attempts):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind(('0.0.0.0', port))
+                logger.info(f'Found available port: {port}')
+                return port
+        except socket.error:
+            logger.warning(f'Port {port} is already in use')
+            continue
+    
+    # If no port is found, try a random port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(('0.0.0.0', 0))
+        port = sock.getsockname()[1]
+        logger.info(f'Using random port: {port}')
+        return port
+
 if __name__ == '__main__':
     try:
+        port = int(os.environ.get('PORT', 5000))
+        logger.info(f'Attempting to start Flask application on port {port}...')
+        
+        # Check if the specified port is available
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind(('0.0.0.0', port))
+        except socket.error:
+            logger.warning(f'Port {port} is already in use, finding another port...')
+            port = find_available_port(start_port=port)
+        
+        logger.info(f'Starting Flask application on port {port}...')
         app.run(
             host='0.0.0.0',
-            port=5000,
+            port=port,
             debug=True,
             use_reloader=False
         )
     except Exception as e:
         logger.error(f'Application failed to start: {str(e)}')
+        logger.error(f'Exception details: {traceback.format_exc()}')
         raise
