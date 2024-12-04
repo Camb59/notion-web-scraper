@@ -85,25 +85,37 @@ def get_database_properties() -> Dict[str, Any]:
                 
                 try:
                     # Query related database
-                    logging.info("Attempting to query related database")
+                    related_db = notion.databases.retrieve(database_id=prop_info["database_id"])
                     pages = notion.databases.query(
-                        database_id=prop_info["database_id"]
+                        database_id=prop_info["database_id"],
+                        page_size=100  # 取得するページ数を増やす
                     ).get("results", [])
                     logging.info(f"Retrieved {len(pages)} pages from related database")
                     
-                    # Process pages
+                    # Process pages with proper property access
                     prop_info["options"] = []
                     for page in pages:
-                        title = page["properties"].get("title", {}).get("title", [])
-                        if title:
-                            page_title = title[0]["plain_text"]
+                        # ページのプロパティから適切なタイトルを取得
+                        properties = page.get("properties", {})
+                        title_prop = next((
+                            prop for prop in properties.values() 
+                            if prop["type"] == "title"
+                        ), None)
+                        
+                        if title_prop and title_prop.get("title"):
+                            title = title_prop["title"][0]["text"]["content"]
                             prop_info["options"].append({
-                                "label": page_title,
+                                "label": title,
                                 "value": page["id"]
                             })
-                            logging.info(f"Added page option: {page_title}")
+                            logging.info(f"Added page option: {title}")
                     
                     prop_info["type"] = "relation_select"
+                    
+                    # Add debug logs
+                    logging.debug(f"Page properties: {properties}")
+                    logging.debug(f"Formatted properties: {prop_info}")
+                    
                 except Exception as e:
                     logging.error(f"Error processing relation property: {str(e)}")
                     logging.error(f"Full error details: {traceback.format_exc()}")
