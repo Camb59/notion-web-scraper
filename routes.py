@@ -1,18 +1,22 @@
 import os
 import logging
 import traceback
-from flask import jsonify, request, render_template
-from app import app, db
-from models import ScrapedContent
+from flask import jsonify, request, render_template, Blueprint
+from models import ScrapedContent, db
 from services.scraper import scrape_url
 from services.translator import translate_text
 
-@app.route('/')
+bp = Blueprint('main', __name__)
+
+def register_routes(app):
+    app.register_blueprint(bp)
+
+@bp.route('/')
 def index():
     """Render the main page"""
     return render_template('index.html')
 
-@app.route('/api/scrape', methods=['POST'])
+@bp.route('/api/scrape', methods=['POST'])
 def scrape():
     try:
         if not request.is_json:
@@ -38,16 +42,16 @@ def scrape():
             }), 500
 
         # データベースへの保存処理
-        content = ScrapedContent(
-            url=url,
-            title=scraped_data.get('title', ''),
-            content=scraped_data.get('content', ''),
-            description=scraped_data.get('description', ''),
-            author=scraped_data.get('author', ''),
-            publish_date=scraped_data.get('date', ''),
-            site_name=scraped_data.get('site_name', ''),
-            header_image=scraped_data.get('header_image', '')
-        )
+        content = ScrapedContent()
+        content.url = url
+        content.title = scraped_data.get('title', '')
+        content.content = scraped_data.get('content', '')
+        content.description = scraped_data.get('description', '')
+        content.author = scraped_data.get('author', '')
+        content.publish_date = scraped_data.get('date', '')
+        content.site_name = scraped_data.get('site_name', '')
+        content.header_image = scraped_data.get('header_image', '')
+        
         db.session.add(content)
         db.session.commit()
 
@@ -68,7 +72,7 @@ def scrape():
             "message": f"URLの抽出に失敗しました: {str(e)}"
         }), 500
 
-@app.route('/api/translate', methods=['POST'])
+@bp.route('/api/translate', methods=['POST'])
 def translate():
     """Translate the scraped content"""
     try:
@@ -102,7 +106,7 @@ def translate():
         logging.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/notion/properties', methods=['GET'])
+@bp.route('/api/notion/properties', methods=['GET'])
 def get_notion_properties():
     """Get all properties from the Notion database"""
     try:
@@ -129,7 +133,7 @@ def get_notion_properties():
             "message": str(e)
         }), 500
 
-@app.route('/api/save-to-notion', methods=['POST'])
+@bp.route('/api/save-to-notion', methods=['POST'])
 def save_to_notion():
     """Save content to Notion with selected properties"""
     try:

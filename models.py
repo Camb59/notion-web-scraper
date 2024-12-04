@@ -1,7 +1,11 @@
 from datetime import datetime
-from app import db
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
 
 class ScrapedContent(db.Model):
+    __tablename__ = 'scraped_content'
+    
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(2048), nullable=False)
     title = db.Column(db.String(512))
@@ -31,6 +35,6 @@ class ScrapedContent(db.Model):
             'translated_content': self.translated_content,
             'translated_description': self.translated_description,
             'header_image': self.header_image,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'notion_page_id': self.notion_page_id
         }
